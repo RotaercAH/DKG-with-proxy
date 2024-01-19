@@ -1,0 +1,19 @@
+[package]
+name = "cl_encrypt"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+#libc = "0.2.151"
+libc = "0.2"
+encoding="*"
+curv = { package = "curv-kzen", git="https://github.com/ZenGo-X/curv.git", rev="44537a74"}
+[build-dependencies]
+#cc = "1.0.73"
+cc = "1.0"
+
+[[bin]]
+name = "cl_encrypt"
+path = "src/main.rs"

@@ -1,0 +1,38 @@
+2024-01-19T14:05:56.703605462+08:00 INFO intergration_test::proxy::proxy_node - Proxy_node is listening on 127.0.0.1:50000
+2024-01-19T14:06:00.698124358+08:00 INFO intergration_test::proxy::proxy_node - From Role : Group Manager Node, Get NodeToProxySetupPhaseP2PMsg
+2024-01-19T14:06:00.698263717+08:00 WARN intergration_test::proxy::proxy_node - Insufficient number of messages, and current number is Mutex { data: 1 }
+2024-01-19T14:06:00.718996540+08:00 INFO intergration_test::proxy::proxy_node - From Role : Group Manager Node, Get NodeToProxySetupPhaseP2PMsg
+2024-01-19T14:06:00.719075059+08:00 WARN intergration_test::proxy::proxy_node - Insufficient number of messages, and current number is Mutex { data: 2 }
+2024-01-19T14:06:04.668575466+08:00 INFO intergration_test::proxy::proxy_node - From Role : Group Manager Node, Get NodeToProxySetupPhaseP2PMsg
+2024-01-19T14:06:04.668662775+08:00 WARN intergration_test::proxy::proxy_node - Insufficient number of messages, and current number is Mutex { data: 3 }
+2024-01-19T14:06:07.607202563+08:00 INFO intergration_test::proxy::proxy_node - From Role : Group Manager Node, Get NodeToProxySetupPhaseP2PMsg
+2024-01-19T14:06:08.607590375+08:00 INFO proxy::gs_tbk_scheme::setup_phase - Setup phase is staring!
+2024-01-19T14:06:08.609160372+08:00 INFO intergration_test::proxy::proxy_node - From id : 1, Role : Group Manager Node, Get NodeSetupPhaseFinishFlag
+2024-01-19T14:06:08.609288016+08:00 INFO intergration_test::proxy::proxy_node - From id : 2, Role : Group Manager Node, Get NodeSetupPhaseFinishFlag
+2024-01-19T14:06:08.609410250+08:00 WARN intergration_test::proxy::proxy_node - Insufficient number of messages, and current number is Mutex { data: 1 }
+2024-01-19T14:06:08.609462210+08:00 INFO intergration_test::proxy::proxy_node - From id : 4, Role : Group Manager Node, Get NodeSetupPhaseFinishFlag
+2024-01-19T14:06:08.609536620+08:00 INFO intergration_test::proxy::proxy_node - From id : 3, Role : Group Manager Node, Get NodeSetupPhaseFinishFlag
+2024-01-19T14:06:08.609622674+08:00 WARN intergration_test::proxy::proxy_node - Insufficient number of messages, and current number is Mutex { data: 2 }
+2024-01-19T14:06:08.609663163+08:00 WARN intergration_test::proxy::proxy_node - Insufficient number of messages, and current number is Mutex { data: 3 }
+2024-01-19T14:06:08.609684883+08:00 INFO proxy::gs_tbk_scheme::setup_phase - Setup phase is finished!
+2024-01-19T14:06:08.610264201+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - Keygen phase is staring!
+2024-01-19T14:06:08.703595918+08:00 INFO intergration_test::proxy::proxy_node - From id : 2, Role : Group Manager Node, Taget key : Gamma_A, Get NodeSetupPhaseFinishFlag
+2024-01-19T14:06:08.704267506+08:00 INFO intergration_test::proxy::proxy_node - From id : 4, Role : Group Manager Node, Taget key : Gamma_A, Get NodeSetupPhaseFinishFlag
+2024-01-19T14:06:08.704371411+08:00 INFO intergration_test::proxy::proxy_node - From id : 3, Role : Group Manager Node, Taget key : Gamma_A, Get NodeSetupPhaseFinishFlag
+2024-01-19T14:06:08.704422350+08:00 INFO intergration_test::proxy::proxy_node - From id : 1, Role : Group Manager Node, Taget key : Gamma_A, Get NodeSetupPhaseFinishFlag
+2024-01-19T14:06:08.713333114+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.720889074+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.728420024+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.736470103+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.743837544+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.751370295+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.759032655+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.767694073+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.775696151+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.783948130+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.791596020+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.799021743+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.806389744+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.813946424+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.821252408+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
+2024-01-19T14:06:08.828842527+08:00 INFO proxy::gs_tbk_scheme::keygen_phase - verify is "true"
