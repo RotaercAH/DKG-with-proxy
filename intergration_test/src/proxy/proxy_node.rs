@@ -10,7 +10,6 @@ use log::{error, info, warn};
 
 use proxy::communication::communication::*;
 use message::proxy::common_msg::{SetupMsg, KeyGenMsg};
-use message::params::DKGTag;
 use proxy::proxy::Proxy;
 use proxy::config::config::Config;
 use message::node::setup_msg::{NodeToProxySetupPhaseP2PMsg,NodeSetupPhaseFinishFlag};
@@ -208,37 +207,31 @@ pub async fn main () -> Result<(), anyhow::Error>
                             match keygen_msg {
                                 message::node::common_msg::KeyGenMsg::NodeToProxyKeyGenPhaseTwoP2PMsg(msg) => 
                                 {
-                                    info!("From id : {}, Role : {}, Taget key : {:?}, Get NodeSetupPhaseFinishFlag",msg.sender,msg.role,msg.dkgtag);
-                                    match msg.dkgtag 
+                                    info!("From id : {}, Role : {}, Get NodeSetupPhaseFinishFlag",msg.sender,msg.role);
+                                    let locked_proxy = proxy.lock().await;
+                                    let keygen_phase_two_msg_vec_A = keygen_phase_two_msg_vec_A_clone.clone();
+                                    let mut locked_vec = keygen_phase_two_msg_vec_A.lock().await;
+                                    locked_vec.push(msg);
+                                    if locked_vec.len() == locked_proxy.threashold_param.share_counts as usize 
                                     {
-                                        DKGTag::Gamma_A => 
+                                        let vec = (*locked_vec).clone();
+                                        let node_list = locked_proxy.node_info_vec.clone().unwrap();
+                                        let keygen_phase_three_msg_map =  locked_proxy.keygen_phase_three(vec).unwrap();
+                                        for (node_id , keygen_phase_three_msg) in keygen_phase_three_msg_map
                                         {
-                                            let locked_proxy = proxy.lock().await;
-                                            let keygen_phase_two_msg_vec_A = keygen_phase_two_msg_vec_A_clone.clone();
-                                            let mut locked_vec = keygen_phase_two_msg_vec_A.lock().await;
-                                            locked_vec.push(msg);
-                                            if locked_vec.len() == locked_proxy.threashold_param.share_counts as usize 
+                                            let keygen_phase_three_msg_str = keygen_to_gstbk(KeyGenMsg::ProxyToNodeKeyGenPhaseThreeP2PMsg(keygen_phase_three_msg));
+                                            match p2p(keygen_phase_three_msg_str, node_id, node_list.clone()).await 
                                             {
-                                                let vec = (*locked_vec).clone();
-                                                let node_list = locked_proxy.node_info_vec.clone().unwrap();
-                                                let keygen_phase_three_msg_map =  locked_proxy.keygen_phase_three(vec).unwrap();
-                                                for (node_id , keygen_phase_three_msg) in keygen_phase_three_msg_map
+                                                Ok(_) => 
                                                 {
-                                                    let keygen_phase_three_msg_str = keygen_to_gstbk(KeyGenMsg::ProxyToNodeKeyGenPhaseThreeP2PMsg(keygen_phase_three_msg));
-                                                    match p2p(keygen_phase_three_msg_str, node_id, node_list.clone()).await 
-                                                    {
-                                                        Ok(_) => 
-                                                        {
-                                                            //println!("ProxyToNodeKeyGenPhaseThreeP2PMsg_a have send");
-                                                        }
-                                                        Err(e) => 
-                                                        {
-                                                            error!("Error: {}, ProxyToNodeKeyGenPhaseThreeP2PMsg_A can not sent ",e);
-                                                            return ;
-                                                        }
-                                                    }; 
+                                                    //println!("ProxyToNodeKeyGenPhaseThreeP2PMsg_a have send");
                                                 }
-                                            }
+                                                Err(e) => 
+                                                {
+                                                    error!("Error: {}, ProxyToNodeKeyGenPhaseThreeP2PMsg_A can not sent ",e);
+                                                    return ;
+                                                }
+                                            }; 
                                         }
                                     }
                                 }
@@ -353,7 +346,7 @@ fn test()
 {
    match main() 
    {
-    Ok(_) => 
+    Ok(_) =>
     {
         info!("Ok");
     }

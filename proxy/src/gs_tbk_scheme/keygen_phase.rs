@@ -45,7 +45,6 @@ impl Proxy
     pub fn keygen_phase_three(&self,msg_vec:Vec<NodeToProxyKeyGenPhaseTwoP2PMsg>) -> Result<HashMap<u16, ProxyToNodeKeyGenPhaseThreeP2PMsg>,Error>
     {
         assert_eq!(msg_vec.len(), self.threashold_param.share_counts as usize);
-        let dkgtag = msg_vec[0].dkgtag.clone();
         // Verify CLDLProof
         let mut all_verify_flag = true;
         let share_proof_map_vec:Vec<HashMap<u16, EncAndProof>> = msg_vec.iter().map(|msg|msg.share_proof_map.clone()).collect();
@@ -59,9 +58,8 @@ impl Proxy
                 let share_proof_info = share_proof_map.get(&node.id).unwrap();
                 let flag_str = cl_ecc_verify(share_proof_info.share_proof.clone(), node.cl_pk.clone(), share_proof_info.share_enc.clone(), commit_str);
                 let flag;
-                if flag_str == "true" {flag = true;} 
+                if flag_str == "true" {flag = true;}
                 else{flag = false;} 
-                info!("verify is {:?}", flag_str);
                 all_verify_flag = all_verify_flag && flag;
             }
         } 
@@ -87,12 +85,10 @@ impl Proxy
             {
                 let random = Scalar::<Secp256k1>::random().to_bigint().to_string();
                 let c_zero = encrypt(node.cl_pk.clone(), "0".to_string(), random.clone());
-                // let (c_zero,_) = encrypt(&group, &hex_to_pk(&node.pk_hex), &Scalar::<Bls12_381_1>::zero());
                 let share_enc_sum:String = share_proof_map_vec.iter().fold(c_zero, |acc,v|{add_ciphertexts(acc, v.get(&node.id).as_ref().unwrap().share_enc.clone())});
                 msg_map.insert
                 (node.id.clone(), ProxyToNodeKeyGenPhaseThreeP2PMsg
                     {
-                        dkgtag:dkgtag.clone(),
                         sender:self.id.clone(),
                         role:self.role.clone(),
                         share_enc_sum,

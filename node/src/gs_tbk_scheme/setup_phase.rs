@@ -2,7 +2,7 @@ use log::info;
 use curv::elliptic::curves::{Secp256k1, Scalar};
 use cl_encrypt::cl::clwarpper::*;
 use crate::config::config::Config;
-use crate::node::{Node,DKGParams,DKGParam};
+use crate::node::{Node,DKGParam};
 use message::proxy::setup_msg::{ProxySetupPhaseBroadcastMsg,ProxySetupPhaseFinishFlag};
 use message::node::setup_msg::{NodeToProxySetupPhaseP2PMsg,NodeSetupPhaseFinishFlag};
 use message::params::{CLKeypair};
@@ -26,10 +26,11 @@ impl Node{
             proxy_address:gs_tbk_config.proxy_addr,
             threashold_param:gs_tbk_config.threshold_params,
             cl_keypair:cl_keypair,
-            dkgparams:DKGParams
-            { 
-                dkgparam_A:Some(DKGParam{ui:None,yi:None,yi_map:None,y:None,mskshare:None,addshare:None}),
-            },
+            dkgparam:DKGParam{ui:None,yi:None,yi_map:None,y:None,mskshare:None,addshare:None},
+            // dkgparams:DKGParams
+            // { 
+            //     dkgparam_A:Some(DKGParam{ui:None,yi:None,yi_map:None,y:None,mskshare:None,addshare:None}),
+            // },
             gpk:None,
             node_info_vec:None,
 

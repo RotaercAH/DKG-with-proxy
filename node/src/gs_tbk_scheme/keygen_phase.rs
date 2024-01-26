@@ -14,27 +14,15 @@ use cl_encrypt::cl::clwarpper::*;
 use crate::Error::{self, InvalidSS};
 use message::proxy::keygen_msg::{ProxyKeyGenPhaseOneBroadcastMsg,ProxyToNodeKeyGenPhaseThreeP2PMsg,ProxyToNodesKeyGenPhasefiveBroadcastMsg};
 use message::node::keygen_msg::{NodeKeyGenPhaseOneBroadcastMsg,NodeToProxyKeyGenPhaseTwoP2PMsg,ZkpProof,NodeToProxyKeyGenPhaseFiveP2PMsg, EncAndProof};
-use message::params::{Gpk,DKGTag};
-use crate::node::{Node,DKGParam};
+use message::params::{Gpk};
+use crate::node::{Node};
 
 impl Node { 
-    /// 选择对应密钥的dkg参数
-    pub fn choose_dkgparam(&self, dkgtag:&DKGTag)-> &DKGParam
-    {
-        let dkgparam = match dkgtag 
-        {
-            DKGTag::Gamma_A=>
-            {
-                self.dkgparams.dkgparam_A.as_ref().unwrap()
-            }
-        };
-        dkgparam
-    }
-    
+
     /// 自选(n,n) share 的私钥碎片，计算哈希承诺并广播
-    pub fn keygen_phase_one(&mut self, dkgtag:DKGTag,msg:ProxyKeyGenPhaseOneBroadcastMsg) -> NodeKeyGenPhaseOneBroadcastMsg
+    pub fn keygen_phase_one(&mut self, msg:ProxyKeyGenPhaseOneBroadcastMsg) -> NodeKeyGenPhaseOneBroadcastMsg
     {
-        info!("Key {:?} is generating!",dkgtag);
+        info!("Key is generating!");
         let gpk = Gpk
         {
             g:msg.g,
@@ -44,13 +32,10 @@ impl Node {
         self.participants = Some(msg.participants);
         let ui = FE::random();
         let yi = self.gpk.as_ref().unwrap().g.clone() * &ui;//g_ui
-        match dkgtag  
-        {
-            DKGTag::Gamma_A=>{ 
-                self.dkgparams.dkgparam_A.as_mut().unwrap().ui = Some(ui);
-                self.dkgparams.dkgparam_A.as_mut().unwrap().yi = Some(yi.clone());
-            }
-        }
+
+        self.dkgparam.ui = Some(ui);
+        self.dkgparam.yi = Some(yi.clone());
+
         let blind_factor = BigInt::sample(256);
         let com = HashCommitment::<Sha256>::create_commitment_with_user_defined_randomness(
             &BigInt::from_bytes(yi.clone().to_bytes(true).as_ref()),
@@ -59,7 +44,6 @@ impl Node {
         
         NodeKeyGenPhaseOneBroadcastMsg
         {
-            dkgtag:dkgtag,
             sender:self.id.unwrap(),
             role:self.role.clone(),
             blind_factor:blind_factor,
@@ -75,7 +59,6 @@ impl Node {
     {
         //verify length
         assert_eq!(msg_vec.len(), self.threashold_param.share_counts as usize);
-        let dkgtag = msg_vec[0].dkgtag.clone();
         //Verify all Hashcommitment
         let all_com_verify_tag = (0..msg_vec.len()).all( |i| {
             HashCommitment::<Sha256>::create_commitment_with_user_defined_randomness(&BigInt::from_bytes(msg_vec[i].yi.to_bytes(true).as_ref()), &msg_vec[i].blind_factor )== msg_vec[i].com
@@ -89,15 +72,10 @@ impl Node {
                 yi_map.insert(msg.sender, msg.yi.clone());
             }
             let y:Point<Secp256k1> = msg_vec.iter().map(|msg| msg.yi.clone()).sum();
-            match dkgtag  
-            {
-                DKGTag::Gamma_A=>{
-                    self.dkgparams.dkgparam_A.as_mut().unwrap().yi_map = Some(yi_map);
-                    self.dkgparams.dkgparam_A.as_mut().unwrap().y = Some(y);
-                }
-            }
+            self.dkgparam.yi_map = Some(yi_map);
+            self.dkgparam.y = Some(y);
             
-            let dkgparam = self.choose_dkgparam(&dkgtag);
+            let dkgparam = self.dkgparam.clone();
             //生成系数承诺和函数值
             let (vss_scheme, secret_shares) =
             VerifiableSS::share(self.threashold_param.threshold, self.threashold_param.share_counts, &dkgparam.ui.as_ref().unwrap());
@@ -114,7 +92,6 @@ impl Node {
                 let share_commit = share * self.gpk.as_ref().unwrap().g.clone(); // 函数值承诺 f(i) * G
                 let commit_str = to_hex(share_commit.to_bytes(true).as_ref());
                 
-                info!("cl_key_str in keygen {:?}", node.cl_pk.clone());
                 //加密
                 let share_enc = encrypt(node.cl_pk.clone(), share_str.clone(), random_str.clone());
                 //零知识证明
@@ -131,7 +108,6 @@ impl Node {
             (
                 NodeToProxyKeyGenPhaseTwoP2PMsg
                 {
-                    dkgtag:dkgtag,
                     sender:self.id.unwrap(),
                     role:self.role.clone(),
                     share_proof_map:share_proof_map,
@@ -148,7 +124,6 @@ impl Node {
     /// 解密share，然后进行系数承诺验证
     pub fn keygen_phase_four(&mut self, msg:ProxyToNodeKeyGenPhaseThreeP2PMsg, )->Result<(), Error>
     {
-        let dkgtag = msg.dkgtag.clone();
         // Decrypt CL share
         let x_i = decrypt(self.cl_keypair.sk.clone(), msg.share_enc_sum);
         let mut x_i_ = String::new();
@@ -160,13 +135,10 @@ impl Node {
         // verify coefficient commitment
         if msg.vss_scheme_sum.validate_share(&xi_fe, self.id.unwrap()).is_ok()
         {
+            self.dkgparam.mskshare = Some(xi_fe.clone());
+            info!("xi_fe is generated!");
+            info!("xi_fe = {:?}", xi_fe);
             //println!("Sharing phase:DKGTag is {:?} vss share x{} is {}",dkgtag,self.id.unwrap(),x_i.to_bigint()); 
-            match dkgtag {
-                DKGTag::Gamma_A=>{
-                    self.dkgparams.dkgparam_A.as_mut().unwrap().mskshare = Some(xi_fe);
-                    info!("Gamma_A is generated!");
-                }
-            }
             Ok(
                 ()
             )
@@ -189,12 +161,12 @@ impl Node {
         // challenge
         let e = Sha256::new() 
         .chain_point(&gpk.g)
-        .chain_point(&self.dkgparams.dkgparam_A.as_ref().unwrap().yi_map.as_ref().unwrap().get(&self.id.unwrap().clone()).unwrap())
+        .chain_point(&self.dkgparam.yi_map.as_ref().unwrap().get(&self.id.unwrap().clone()).unwrap())
         .chain_point(&g_t)
         .result_scalar();
 
         // challenge response
-        let z_gamma_A_i = &t_rand + &e * self.dkgparams.dkgparam_A.as_ref().unwrap().ui.as_ref().unwrap();
+        let z_gamma_A_i = &t_rand + &e * self.dkgparam.ui.as_ref().unwrap();
 
         NodeToProxyKeyGenPhaseFiveP2PMsg
         {
@@ -203,7 +175,7 @@ impl Node {
             zkp_proof:ZkpProof 
             { 
                 z_gamma_A_i: z_gamma_A_i, 
-                g_gamma_A_i: self.dkgparams.dkgparam_A.as_ref().unwrap().yi.as_ref().unwrap().clone(),
+                g_gamma_A_i: self.dkgparam.yi.as_ref().unwrap().clone(),
                 e: e, 
                 g_t: g_t, 
             },

@@ -11,19 +11,19 @@ use node::communication::communication::*;
 use node::node::{Node};
 use node::config::config::Config;
 use message::common_msg::GSTBKMsg;
+use message::params::DKGTag;
 use message::node::keygen_msg::NodeKeyGenPhaseOneBroadcastMsg;
 use message::node::common_msg::{SetupMsg, KeyGenMsg};
-
 
 #[tokio::main]
 pub async fn main() -> Result<(), anyhow::Error> 
 {
     // 初始化 日志记录器
-    let log_path = String::from(env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/node/node2/config/config_file/log4rs.yaml";
+    let log_path = String::from(env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/node/node5/config/config_file/log4rs.yaml";
     log4rs::init_file(log_path, Default::default()).unwrap();
     
     //初始化node
-    let gs_tbk_config_path  = String::from(std::env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/node/node2/config/config_file/node_config.json";
+    let gs_tbk_config_path  = String::from(std::env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/node/node5/config/config_file/node_config.json";
     let gs_tbk_config:Config = serde_json::from_str(&Config::load_config(&gs_tbk_config_path)).unwrap();
 
     //将node设置成共享变量以便在async中能够修改
@@ -38,7 +38,7 @@ pub async fn main() -> Result<(), anyhow::Error>
     //开启节点监听接口
     let node_addr:SocketAddr = node.address.parse()?;
     let listener = TcpListener::bind(node_addr).await?;
-    info!("node1 is listening on {}",node.address);
+    info!("node5 is listening on {}",node.address);
 
     //向proxy发送消息，代码，启动
     let node_setup_msg_str = serde_json::to_string(&message::common_msg::GSTBKMsg::GSTBKMsgN(message::node::common_msg::GSTBKMsg::SetupMsg(SetupMsg::NodeToProxySetupPhaseP2PMsg(node.setup_phase_one())))).unwrap();
@@ -79,7 +79,7 @@ pub async fn main() -> Result<(), anyhow::Error>
                     error!("Failed to get nodemessage: {:?}",e);
                     return ;
                 }
-            };
+            }; 
             match message 
             {
                 GSTBKMsg::GSTBKMsgP(gstbk_proxy_msg) => 
@@ -111,7 +111,6 @@ pub async fn main() -> Result<(), anyhow::Error>
                                     let locked_node = node.lock().await;
                                     locked_node.setup_phase_three(msg);
                                 }
-        
                             }
         
                         }
@@ -129,21 +128,20 @@ pub async fn main() -> Result<(), anyhow::Error>
                                     info!("From id : 0 ,Role : Proxy  Get ProxyKeyGenPhaseOneBroadcastMsg");
                                     info!("Keygen phase is staring!");
                                     //生成ABOC
-                                    // let tag_A = DKGTag::Gamma_A;
+                                    let tag_A = DKGTag::Gamma_A;
                                     let mut locked_node = node.lock().await;
 
                                     //压入自己的vec
                                     let mut locked_vec_A = keygen_phase_one_msg_vec_A.lock().await;
 
                                     //生成并序列化NodeKeyGenPhaseOneBroadcastMsg
-                                    let keygen_phase_one_msg_A = locked_node.keygen_phase_one(msg.clone());
+                                    let keygen_phase_one_msg_A = locked_node.keygen_phase_one(tag_A, msg.clone());
                                     locked_vec_A.push(keygen_phase_one_msg_A.clone());
 
                                     let keygen_phase_one_msg_A_str = keygen_to_gstbk(KeyGenMsg::NodeKeyGenPhaseOneBroadcastMsg(keygen_phase_one_msg_A));
-                                  
+
                                     let mut msg_vec:Vec<String> = Vec::new();
                                     msg_vec.push(keygen_phase_one_msg_A_str);
-                                   
                                     let node_list = locked_node.node_info_vec.clone().unwrap();
 
                                     let node_id = locked_node.id.clone().unwrap();
@@ -205,7 +203,7 @@ pub async fn main() -> Result<(), anyhow::Error>
                                     let node = (*locked_node).clone();
                                     let node_str = serde_json::to_string(&get_node_config(node)).unwrap();
                                     let mut node_path  = std::env::current_dir().unwrap();
-                                    let path = "src/node/node2/info/keygen.json";
+                                    let path = "src/node/node5/info/keygen.json";
                                     node_path.push(path);
                                     std::fs::write(node_path, node_str).unwrap();
                                 }
@@ -254,7 +252,6 @@ pub async fn main() -> Result<(), anyhow::Error>
 
                         //     }
                         // }
-                        // _ => {}
                     }
                 }
                 GSTBKMsg::GSTBKMsgN(gstbk_node_msg) => 
@@ -267,38 +264,41 @@ pub async fn main() -> Result<(), anyhow::Error>
                             {
                                 message::node::common_msg::KeyGenMsg::NodeKeyGenPhaseOneBroadcastMsg(msg) => 
                                 {
-                                    info!("From id : {} ,Role : {} Get NodeKeyGenPhaseOneBroadcastMsg ",msg.sender,msg.role);
+                                    info!("From id : {} ,Role : {} ,Taget : {:?} Get NodeKeyGenPhaseOneBroadcastMsg ",msg.sender,msg.role,msg.dkgtag);
                                     let mut locked_node = node.lock().await;
-                                    let mut locked_vec = keygen_phase_one_msg_vec_A.lock().await;
-                                    locked_vec.push(msg);
-                                    if locked_vec.len() == locked_node.threashold_param.share_counts as usize  
-                                    {
-                                        let vec = (*locked_vec).clone();
-                                        let keygen_phase_two_msg = match locked_node.keygen_phase_two(&vec) 
+                                    match msg.dkgtag{
+                                        DKGTag::Gamma_A => 
                                         {
-                                            Ok(v) => v,
-                                            Err(e) => 
+                                            let mut locked_vec = keygen_phase_one_msg_vec_A.lock().await;
+                                            locked_vec.push(msg);
+                                            if locked_vec.len() == locked_node.threashold_param.share_counts as usize  
                                             {
-                                                error!("Error:{}, can not get NodeToProxyKeyGenPhaseTwoP2PMsg_A ",e);
-                                                return ;
+                                                let vec = (*locked_vec).clone();
+                                                let keygen_phase_two_msg = match locked_node.keygen_phase_two(&vec) 
+                                                {
+                                                    Ok(v) => v,
+                                                    Err(e) => 
+                                                    {
+                                                        error!("Error:{}, can not get NodeToProxyKeyGenPhaseTwoP2PMsg_A ",e);
+                                                        return ;
+                                                    }
+                                                };
+                                                let keygen_phase_two_msg_str = serde_json::to_string(&message::common_msg::GSTBKMsg::GSTBKMsgN(message::node::common_msg::GSTBKMsg::KeyGenMsg(message::node::common_msg::KeyGenMsg::NodeToProxyKeyGenPhaseTwoP2PMsg(keygen_phase_two_msg)))).unwrap();
+                                                match p2p(keygen_phase_two_msg_str, (*locked_node.proxy_address).to_string()).await 
+                                                {
+                                                    Ok(_) => {}
+                                                    Err(e) => 
+                                                    {
+                                                        error!("Error:{}, NodeToProxyKeyGenPhaseTwoP2PMsg_A can not sent",e);
+                                                        return ;
+                                                    }
+                                                };
                                             }
-                                        };
-                                        let keygen_phase_two_msg_str = serde_json::to_string(&message::common_msg::GSTBKMsg::GSTBKMsgN(message::node::common_msg::GSTBKMsg::KeyGenMsg(message::node::common_msg::KeyGenMsg::NodeToProxyKeyGenPhaseTwoP2PMsg(keygen_phase_two_msg)))).unwrap();
-                                        match p2p(keygen_phase_two_msg_str, (*locked_node.proxy_address).to_string()).await 
-                                        {
-                                            Ok(_) => {}
-                                            Err(e) => 
-                                            {
-                                                error!("Error:{}, NodeToProxyKeyGenPhaseTwoP2PMsg_A can not sent",e);
-                                                return ;
-                                            }
-                                        };
+                                        }
                                     }
                                 }
                                 _ => 
-                                {
-
-                                }   
+                                {}   
                             }
                         }
                         _ => {}

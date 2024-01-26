@@ -15,12 +15,6 @@ pub struct CLKeypair
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum DKGTag
-{
-    Gamma_A
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Gpk
 {
     pub g:Point<Secp256k1>,

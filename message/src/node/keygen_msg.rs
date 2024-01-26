@@ -3,12 +3,10 @@ use curv::elliptic::curves::{Point, Secp256k1, Scalar};
 use serde::{Deserialize, Serialize};
 use curv::BigInt;
 use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
-use crate::params::{DKGTag};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeKeyGenPhaseOneBroadcastMsg
 {
-    pub dkgtag:DKGTag,
     pub sender:u16,
     pub role:String,
     pub blind_factor:BigInt,
@@ -26,7 +24,6 @@ pub struct EncAndProof
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeToProxyKeyGenPhaseTwoP2PMsg
 {//p to p
-    pub dkgtag:DKGTag,
     pub sender:u16,
     pub role:String,
     pub share_proof_map:HashMap<u16, EncAndProof>,

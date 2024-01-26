@@ -18,7 +18,7 @@ pub struct Node
     pub proxy_address: String,
     pub threashold_param: ThreasholdParam,
     pub cl_keypair:CLKeypair,
-    pub dkgparams: DKGParams, 
+    pub dkgparam: DKGParam, 
     pub gpk:Option<Gpk>,
     pub node_info_vec: Option<Vec<NodeInfo>>,
     pub participants: Option<Vec<u16>>,
@@ -31,15 +31,10 @@ pub struct NodeConfig
     pub address: String, 
     pub proxy_address: String,
     pub threashold_param: ThreasholdParam,
-    pub dkgparams: DKGParams, 
+    pub dkgparam: DKGParam, 
     pub gpk:Option<Gpk>,
     pub node_info_vec: Option<Vec<NodeInfo>>,
     pub participants: Option<Vec<u16>>,
-}
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DKGParams
-{
-    pub dkgparam_A:Option<DKGParam>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

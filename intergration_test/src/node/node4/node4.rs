@@ -11,7 +11,6 @@ use node::communication::communication::*;
 use node::node::{Node};
 use node::config::config::Config;
 use message::common_msg::GSTBKMsg;
-use message::params::DKGTag;
 use message::node::keygen_msg::NodeKeyGenPhaseOneBroadcastMsg;
 use message::node::common_msg::{SetupMsg, KeyGenMsg};
 
@@ -130,14 +129,14 @@ pub async fn main() -> Result<(), anyhow::Error>
                                     info!("From id : 0 ,Role : Proxy  Get ProxyKeyGenPhaseOneBroadcastMsg");
                                     info!("Keygen phase is staring!");
                                     //生成ABOC
-                                    let tag_A = DKGTag::Gamma_A;
+                                    // let tag_A = DKGTag::Gamma_A;
                                     let mut locked_node = node.lock().await;
 
                                     //压入自己的vec
                                     let mut locked_vec_A = keygen_phase_one_msg_vec_A.lock().await;
 
                                     //生成并序列化NodeKeyGenPhaseOneBroadcastMsg
-                                    let keygen_phase_one_msg_A = locked_node.keygen_phase_one(tag_A, msg.clone());
+                                    let keygen_phase_one_msg_A = locked_node.keygen_phase_one(msg.clone());
                                     locked_vec_A.push(keygen_phase_one_msg_A.clone());
 
                                     let keygen_phase_one_msg_A_str = keygen_to_gstbk(KeyGenMsg::NodeKeyGenPhaseOneBroadcastMsg(keygen_phase_one_msg_A));
@@ -267,37 +266,32 @@ pub async fn main() -> Result<(), anyhow::Error>
                             {
                                 message::node::common_msg::KeyGenMsg::NodeKeyGenPhaseOneBroadcastMsg(msg) => 
                                 {
-                                    info!("From id : {} ,Role : {} ,Taget : {:?} Get NodeKeyGenPhaseOneBroadcastMsg ",msg.sender,msg.role,msg.dkgtag);
+                                    info!("From id : {} ,Role : {} Get NodeKeyGenPhaseOneBroadcastMsg ",msg.sender,msg.role);
                                     let mut locked_node = node.lock().await;
-                                    match msg.dkgtag{
-                                        DKGTag::Gamma_A => 
+                                    let mut locked_vec = keygen_phase_one_msg_vec_A.lock().await;
+                                    locked_vec.push(msg);
+                                    if locked_vec.len() == locked_node.threashold_param.share_counts as usize  
+                                    {
+                                        let vec = (*locked_vec).clone();
+                                        let keygen_phase_two_msg = match locked_node.keygen_phase_two(&vec) 
                                         {
-                                            let mut locked_vec = keygen_phase_one_msg_vec_A.lock().await;
-                                            locked_vec.push(msg);
-                                            if locked_vec.len() == locked_node.threashold_param.share_counts as usize  
+                                            Ok(v) => v,
+                                            Err(e) => 
                                             {
-                                                let vec = (*locked_vec).clone();
-                                                let keygen_phase_two_msg = match locked_node.keygen_phase_two(&vec) 
-                                                {
-                                                    Ok(v) => v,
-                                                    Err(e) => 
-                                                    {
-                                                        error!("Error:{}, can not get NodeToProxyKeyGenPhaseTwoP2PMsg_A ",e);
-                                                        return ;
-                                                    }
-                                                };
-                                                let keygen_phase_two_msg_str = serde_json::to_string(&message::common_msg::GSTBKMsg::GSTBKMsgN(message::node::common_msg::GSTBKMsg::KeyGenMsg(message::node::common_msg::KeyGenMsg::NodeToProxyKeyGenPhaseTwoP2PMsg(keygen_phase_two_msg)))).unwrap();
-                                                match p2p(keygen_phase_two_msg_str, (*locked_node.proxy_address).to_string()).await 
-                                                {
-                                                    Ok(_) => {}
-                                                    Err(e) => 
-                                                    {
-                                                        error!("Error:{}, NodeToProxyKeyGenPhaseTwoP2PMsg_A can not sent",e);
-                                                        return ;
-                                                    }
-                                                };
+                                                error!("Error:{}, can not get NodeToProxyKeyGenPhaseTwoP2PMsg_A ",e);
+                                                return ;
                                             }
-                                        }
+                                        };
+                                        let keygen_phase_two_msg_str = serde_json::to_string(&message::common_msg::GSTBKMsg::GSTBKMsgN(message::node::common_msg::GSTBKMsg::KeyGenMsg(message::node::common_msg::KeyGenMsg::NodeToProxyKeyGenPhaseTwoP2PMsg(keygen_phase_two_msg)))).unwrap();
+                                        match p2p(keygen_phase_two_msg_str, (*locked_node.proxy_address).to_string()).await 
+                                        {
+                                            Ok(_) => {}
+                                            Err(e) => 
+                                            {
+                                                error!("Error:{}, NodeToProxyKeyGenPhaseTwoP2PMsg_A can not sent",e);
+                                                return ;
+                                            }
+                                        };
                                     }
                                 }
                                 _ => 

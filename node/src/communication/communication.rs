@@ -70,7 +70,7 @@ pub fn get_node_config (node : Node) -> NodeConfig
         address: node.address, 
         proxy_address: node.proxy_address, 
         threashold_param: node.threashold_param, 
-        dkgparams: node.dkgparams, 
+        dkgparam: node.dkgparam, 
         gpk: node.gpk, 
         node_info_vec: node.node_info_vec, 
         participants: node.participants, 

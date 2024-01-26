@@ -1,0 +1,15 @@
+2024-01-19T15:33:52.175586519+08:00 INFO intergration_test::node::node1::node1 - node1 is listening on 127.0.0.1:50001
+2024-01-19T15:33:52.175751846+08:00 INFO node::gs_tbk_scheme::setup_phase - Setup phase is starting!
+2024-01-19T15:34:06.968752867+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxySetupPhaseBroadcastMsg
+2024-01-19T15:34:06.988218859+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxySetupPhaseFinishFlag
+2024-01-19T15:34:06.988290412+08:00 INFO node::gs_tbk_scheme::setup_phase - Setup phase is finished!
+2024-01-19T15:34:07.015952816+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxyKeyGenPhaseStartFlag
+2024-01-19T15:34:07.016396995+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxyKeyGenPhaseOneBroadcastMsg
+2024-01-19T15:34:07.016447007+08:00 INFO intergration_test::node::node1::node1 - Keygen phase is staring!
+2024-01-19T15:34:07.016483188+08:00 INFO node::gs_tbk_scheme::keygen_phase - Key Gamma_A is generating!
+2024-01-19T15:34:07.048769194+08:00 INFO intergration_test::node::node1::node1 - From id : 3 ,Role : Group Manager Node ,Taget : Gamma_A Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-01-19T15:34:07.049740494+08:00 INFO intergration_test::node::node1::node1 - From id : 4 ,Role : Group Manager Node ,Taget : Gamma_A Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-01-19T15:34:07.052000432+08:00 INFO intergration_test::node::node1::node1 - From id : 2 ,Role : Group Manager Node ,Taget : Gamma_A Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-01-19T15:34:07.259331778+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxyToNodeKeyGenPhaseThreeP2PMsg
+2024-01-19T15:34:07.262421052+08:00 INFO node::gs_tbk_scheme::keygen_phase - Gamma_A is generated!
+2024-01-19T15:34:07.262464354+08:00 INFO node::gs_tbk_scheme::keygen_phase - Gamma_A = Secp256k1Scalar { purpose: "from_bigint", fe: Zeroizing(Some(SK(SecretKey(02de66044701aea4dc4561f1282a5cf748ca33fcc81542f4c0bf96b71a158171)))) }
