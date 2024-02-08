@@ -1,15 +1,20 @@
-2024-01-19T15:33:52.175586519+08:00 INFO intergration_test::node::node1::node1 - node1 is listening on 127.0.0.1:50001
-2024-01-19T15:33:52.175751846+08:00 INFO node::gs_tbk_scheme::setup_phase - Setup phase is starting!
-2024-01-19T15:34:06.968752867+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxySetupPhaseBroadcastMsg
-2024-01-19T15:34:06.988218859+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxySetupPhaseFinishFlag
-2024-01-19T15:34:06.988290412+08:00 INFO node::gs_tbk_scheme::setup_phase - Setup phase is finished!
-2024-01-19T15:34:07.015952816+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxyKeyGenPhaseStartFlag
-2024-01-19T15:34:07.016396995+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxyKeyGenPhaseOneBroadcastMsg
-2024-01-19T15:34:07.016447007+08:00 INFO intergration_test::node::node1::node1 - Keygen phase is staring!
-2024-01-19T15:34:07.016483188+08:00 INFO node::gs_tbk_scheme::keygen_phase - Key Gamma_A is generating!
-2024-01-19T15:34:07.048769194+08:00 INFO intergration_test::node::node1::node1 - From id : 3 ,Role : Group Manager Node ,Taget : Gamma_A Get NodeKeyGenPhaseOneBroadcastMsg 
-2024-01-19T15:34:07.049740494+08:00 INFO intergration_test::node::node1::node1 - From id : 4 ,Role : Group Manager Node ,Taget : Gamma_A Get NodeKeyGenPhaseOneBroadcastMsg 
-2024-01-19T15:34:07.052000432+08:00 INFO intergration_test::node::node1::node1 - From id : 2 ,Role : Group Manager Node ,Taget : Gamma_A Get NodeKeyGenPhaseOneBroadcastMsg 
-2024-01-19T15:34:07.259331778+08:00 INFO intergration_test::node::node1::node1 - From id : 0 ,Role : Proxy  Get ProxyToNodeKeyGenPhaseThreeP2PMsg
-2024-01-19T15:34:07.262421052+08:00 INFO node::gs_tbk_scheme::keygen_phase - Gamma_A is generated!
-2024-01-19T15:34:07.262464354+08:00 INFO node::gs_tbk_scheme::keygen_phase - Gamma_A = Secp256k1Scalar { purpose: "from_bigint", fe: Zeroizing(Some(SK(SecretKey(02de66044701aea4dc4561f1282a5cf748ca33fcc81542f4c0bf96b71a158171)))) }
+2024-02-08T15:34:43.685070723+08:00 INFO intergration_test::node::node5::node5 - node5 is listening on 127.0.0.1:50005
+2024-02-08T15:34:43.685175792+08:00 INFO node::gs_tbk_scheme::setup_phase - Setup phase is starting!
+2024-02-08T15:34:54.928475573+08:00 INFO intergration_test::node::node5::node5 - From id : 0 ,Role : Proxy  Get ProxySetupPhaseBroadcastMsg
+2024-02-08T15:34:54.930889199+08:00 INFO intergration_test::node::node5::node5 - From id : 0 ,Role : Proxy  Get ProxySetupPhaseFinishFlag
+2024-02-08T15:34:54.930978189+08:00 INFO node::gs_tbk_scheme::setup_phase - Setup phase is finished!
+2024-02-08T15:34:54.958023226+08:00 INFO intergration_test::node::node5::node5 - From id : 0 ,Role : Proxy  Get ProxyKeyGenPhaseStartFlag
+2024-02-08T15:34:54.958628983+08:00 INFO intergration_test::node::node5::node5 - From id : 0 ,Role : Proxy  Get ProxyKeyGenPhaseOneBroadcastMsg
+2024-02-08T15:34:54.958695923+08:00 INFO intergration_test::node::node5::node5 - Keygen phase is staring!
+2024-02-08T15:34:54.958712603+08:00 INFO node::gs_tbk_scheme::keygen_phase - Key is generating!
+2024-02-08T15:34:54.959750868+08:00 INFO intergration_test::node::node5::node5 - From id : 4 ,Role : Group Manager Node Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-02-08T15:34:54.959908337+08:00 INFO intergration_test::node::node5::node5 - From id : 1 ,Role : Group Manager Node Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-02-08T15:34:54.960233935+08:00 INFO intergration_test::node::node5::node5 - From id : 6 ,Role : Group Manager Node Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-02-08T15:34:54.960469134+08:00 INFO intergration_test::node::node5::node5 - From id : 5 ,Role : Group Manager Node Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-02-08T15:34:54.960614903+08:00 INFO intergration_test::node::node5::node5 - From id : 2 ,Role : Group Manager Node Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-02-08T15:34:54.961255606+08:00 INFO intergration_test::node::node5::node5 - From id : 7 ,Role : Group Manager Node Get NodeKeyGenPhaseOneBroadcastMsg 
+2024-02-08T15:34:54.961474805+08:00 INFO node::gs_tbk_scheme::keygen_phase - pk = "43001029007100233723561548090855912270 1 -1924099569189750061 0 false -810544624661213367964996895060815354969862949953524330678236141990627130460359"
+2024-02-08T15:34:55.435123477+08:00 INFO intergration_test::node::node5::node5 - From id : 0 ,Role : Proxy  Get ProxyToNodeKeyGenPhaseThreeP2PMsg
+2024-02-08T15:34:55.437697014+08:00 INFO node::gs_tbk_scheme::keygen_phase - commitment0 = Some("43001029007100233723561548090855912270 1 -1924099569189750061 0 false -810544624661213367964996895060815354969862949953524330678236141990627130460359")
+2024-02-08T15:34:55.439199917+08:00 INFO node::gs_tbk_scheme::keygen_phase - xi_fe is generated!
+2024-02-08T15:34:55.439217787+08:00 INFO node::gs_tbk_scheme::keygen_phase - xi_fe = "10669034031055014918321487317853376426563590831316345164"

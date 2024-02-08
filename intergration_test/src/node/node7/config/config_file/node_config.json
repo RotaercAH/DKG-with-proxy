@@ -1,8 +1,9 @@
 {
     "proxy_addr":"127.0.0.1:50000",
-    "node_addr":"127.0.0.1:50003",
+    "node_addr":"127.0.0.1:50007",
     "threshold_params":{
       "threshold":4,
       "share_counts":7
     }
+    
   }

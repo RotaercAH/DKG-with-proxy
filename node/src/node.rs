@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 
-use curv::{elliptic::curves::{Secp256k1, Point, Scalar}};
+use curv::{elliptic::curves::{Secp256k1, Point, Scalar}, BigInt};
 use serde::{Deserialize, Serialize};
 
 
@@ -40,10 +40,10 @@ pub struct NodeConfig
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DKGParam
 {
-    pub ui:Option<Scalar<Secp256k1>>,
-    pub yi:Option<Point<Secp256k1>>,
-    pub yi_map:Option<HashMap<u16, Point<Secp256k1>>>,
-    pub y:Option<Point<Secp256k1>>,
-    pub mskshare: Option<Scalar<Secp256k1>>,// x_i
+    pub ui:Option<BigInt>,// a
+    pub yi:Option<String>, // gp^a
+    pub yi_map:Option<HashMap<u16, String>>,
+    pub y:Option<String>,
+    pub mskshare: Option<String>,// x_i
     pub addshare:Option<Scalar<Secp256k1>>,// x_i * li
 }

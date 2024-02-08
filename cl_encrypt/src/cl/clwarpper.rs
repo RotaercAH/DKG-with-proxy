@@ -17,6 +17,16 @@ extern "C" {
     pub fn scal_ciphertexts_cpp(cipher_str: *const c_char, m_str: *const c_char) -> *const c_char;
     pub fn cl_ecc_prove_cpp(pk_str: *const c_char, cipher_str: *const c_char , commit_str: *const c_char, m_str: *const c_char, r_str: *const c_char) -> *const c_char;
     pub fn cl_ecc_verify_cpp(proof_str: *const c_char, pk_str: *const c_char, cipher_str: *const c_char , commit_str: *const c_char) -> *const c_char;
+    pub fn cl_enc_com_prove_cpp(pk_str: *const c_char, cipher_str: *const c_char , commit_str: *const c_char, m_str: *const c_char, r_str: *const c_char) -> *const c_char;
+    pub fn cl_enc_com_verify_cpp(proof_str: *const c_char, pk_str: *const c_char, cipher_str: *const c_char , commit_str: *const c_char) -> *const c_char;
+    pub fn power_of_h_cpp(x_str: *const c_char) -> *const c_char;
+    pub fn calculate_commit_cpp(x_str: *const c_char, delta_str: *const c_char) -> *const c_char;
+    pub fn calculate_commitments_cpp(coefficients_str: *const c_char, delta_str: *const c_char) -> *const c_char;
+    pub fn verify_share_cpp(commitments_str: *const c_char, secret_share_str: *const c_char, index_str: *const c_char, delta_str: *const c_char) -> *const c_char;
+    pub fn verify_share_commit_cpp(commitments_str: *const c_char, share_commit_str: *const c_char, index_str: *const c_char, delta_str: *const c_char) -> *const c_char;
+    pub fn qfi_add_cpp(qfi1_str: *const c_char, qfi2_str: *const c_char) -> *const c_char;
+    pub fn qfi_mul_cpp(qfi: *const c_char, mpz: *const c_char) -> *const c_char;
+    pub fn get_qfi_zero_cpp() -> *const c_char;
 }
 
 pub fn c_char_decode(input: *const i8) -> String {
@@ -101,6 +111,92 @@ pub fn cl_ecc_verify(proof: String, pk: String, cipher: String, commit: String)-
     let commit_str =  CString::new(commit).unwrap();
     unsafe{
         return c_char_decode(cl_ecc_verify_cpp(proof_str.as_ptr(), pk_str.as_ptr(), c_str.as_ptr(), commit_str.as_ptr()));
+    }
+}
+
+pub fn cl_enc_com_prove(pk: String, cipher: String, commit: String, message: String, random: String)-> String{
+    let pk_str= CString::new(pk).unwrap();
+    let c_str =  CString::new(cipher).unwrap();
+    let commit_str =  CString::new(commit).unwrap();
+    let m_str =  CString::new(message).unwrap();
+    let r_str =  CString::new(random).unwrap();
+    unsafe{
+        return c_char_decode(cl_enc_com_prove_cpp(pk_str.as_ptr(), c_str.as_ptr(), commit_str.as_ptr(), m_str.as_ptr(), r_str.as_ptr()));
+    }
+}
+
+pub fn cl_enc_com_verify(proof: String, pk: String, cipher: String, commit: String)-> String{
+    let proof_str = CString::new(proof).unwrap();
+    let pk_str= CString::new(pk).unwrap();
+    let c_str =  CString::new(cipher).unwrap();
+    let commit_str =  CString::new(commit).unwrap();
+    unsafe{
+        return c_char_decode(cl_enc_com_verify_cpp(proof_str.as_ptr(), pk_str.as_ptr(), c_str.as_ptr(), commit_str.as_ptr()));
+    }
+}
+
+pub fn power_of_h(x: String)-> String{
+    let x_str = CString::new(x).unwrap();
+    unsafe{
+        return c_char_decode(power_of_h_cpp(x_str.as_ptr()));
+    }
+}
+
+pub fn calculate_commit(x: String, delta: String)-> String{
+    let x_str = CString::new(x).unwrap();
+    let delta_str = CString::new(delta).unwrap();
+    unsafe{
+        return c_char_decode(calculate_commit_cpp(x_str.as_ptr(), delta_str.as_ptr()));
+    }
+}
+
+pub fn calculate_commitments(coefficient: String, delta: String)-> String{
+    let coefficient_str = CString::new(coefficient).unwrap();
+    let delta_str = CString::new(delta).unwrap();
+    unsafe{
+        return c_char_decode(calculate_commitments_cpp(coefficient_str.as_ptr(), delta_str.as_ptr()));
+    }
+}
+
+pub fn qfi_add(qfi1: String, qfi2: &String)-> String{
+    let qfi1_str = CString::new(qfi1.to_string()).unwrap();
+    let qfi2_str = CString::new(qfi2.to_string()).unwrap();
+    unsafe{
+        return c_char_decode(qfi_add_cpp(qfi1_str.as_ptr(), qfi2_str.as_ptr()));
+    }
+}
+
+pub fn qfi_mul(qfi: String, mpz: String)-> String{
+    let qfi_str = CString::new(qfi).unwrap();
+    let mpz_str = CString::new(mpz).unwrap();
+    unsafe{
+        return c_char_decode(qfi_mul_cpp(qfi_str.as_ptr(), mpz_str.as_ptr()));
+    }
+}
+
+pub fn verify_share(commitments: String, secret_share: String, index: String, delta: String) -> String{
+    let commitments_str = CString::new(commitments).unwrap();
+    let secret_share_str = CString::new(secret_share).unwrap();
+    let index_str = CString::new(index).unwrap();
+    let delta_str =  CString::new(delta).unwrap();
+    unsafe{
+        return c_char_decode(verify_share_cpp(commitments_str.as_ptr(), secret_share_str.as_ptr(), index_str.as_ptr(), delta_str.as_ptr()));
+    }
+}
+
+pub fn verify_share_commit(commitments: String, share_commit: String, index: String, delta: String) -> String{
+    let commitments_str = CString::new(commitments).unwrap();
+    let share_commit_str = CString::new(share_commit).unwrap();
+    let index_str = CString::new(index).unwrap();
+    let delta_str =  CString::new(delta).unwrap();
+    unsafe{
+        return c_char_decode(verify_share_commit_cpp(commitments_str.as_ptr(), share_commit_str.as_ptr(), index_str.as_ptr(), delta_str.as_ptr()));
+    }
+}
+
+pub fn get_qfi_zero() -> String{
+    unsafe{
+        return c_char_decode(get_qfi_zero_cpp());
     }
 }
 

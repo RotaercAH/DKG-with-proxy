@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cl_encrypt = {path = "../cl_encrypt"}
 curv = { package = "curv-kzen", git="https://github.com/ZenGo-X/curv.git", rev="44537a74"}
 sha2 = "0.9"
 thiserror = "1.0.23"

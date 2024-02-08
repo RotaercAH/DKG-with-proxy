@@ -205,6 +205,11 @@ dependencies = [
  "curv-kzen",
  "encoding",
  "libc",
+ "rand 0.8.5",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "time",
 ]
 
 [[package]]
@@ -848,6 +853,7 @@ dependencies = [
  "anyhow",
  "bincode",
  "chrono",
+ "cl_encrypt",
  "crossbeam-channel",
  "curv-kzen",
  "log",

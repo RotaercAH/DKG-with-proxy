@@ -1,5 +1,7 @@
 {
     "rust-analyzer.linkedProjects": [
-        "./node/Cargo.toml"
+        "./node/Cargo.toml",
+        "./cl_encrypt/Cargo.toml",
+        "./cl_encrypt/Cargo.toml"
     ]
 }

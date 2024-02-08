@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use cl_encrypt::vss::vss::IntegerVss;
+use curv::BigInt;
 use curv::elliptic::curves::{Secp256k1, Point, Scalar};
 use curv::cryptographic_primitives::secret_sharing::feldman_vss::{VerifiableSS,ShamirSecretSharing};
 use log::{info};
@@ -48,17 +50,21 @@ impl Proxy
         // Verify CLDLProof
         let mut all_verify_flag = true;
         let share_proof_map_vec:Vec<HashMap<u16, EncAndProof>> = msg_vec.iter().map(|msg|msg.share_proof_map.clone()).collect();
-        let vss_commitments_vec:Vec<VerifiableSS<Secp256k1>> = msg_vec.iter().map(|msg|msg.vss_scheme.clone()).collect();
+        let vss_commitments_vec:Vec<IntegerVss> = msg_vec.iter().map(|msg|msg.vss_scheme.clone()).collect();
+        let mut delta = BigInt::from(1);
+            for i in 1..=self.threashold_param.share_counts{
+                delta *= BigInt::from(i);
+            }
         for node in self.node_info_vec.as_ref().unwrap()
         {
             for i in 0 .. share_proof_map_vec.len(){
                 let share_proof_map = share_proof_map_vec.get(i).unwrap();
                 let vss_commitments = vss_commitments_vec.get(i).unwrap();
-                let commit_str = to_hex(vss_commitments.get_point_commitment(node.id).to_bytes(true).as_ref());
                 let share_proof_info = share_proof_map.get(&node.id).unwrap();
-                let flag_str = cl_ecc_verify(share_proof_info.share_proof.clone(), node.cl_pk.clone(), share_proof_info.share_enc.clone(), commit_str);
+                let proof_verify_str = cl_enc_com_verify(share_proof_info.share_proof.clone(), node.cl_pk.clone(), share_proof_info.share_enc.clone(), share_proof_info.share_commit.clone());
+                let commit_verify_str = vss_commitments.verify_point_commitment(node.id.to_string(), share_proof_info.share_commit.clone(), &delta);
                 let flag;
-                if flag_str == "true" {flag = true;}
+                if proof_verify_str == "true" && commit_verify_str == "true" {flag = true;}
                 else{flag = false;} 
                 all_verify_flag = all_verify_flag && flag;
             }
@@ -66,17 +72,25 @@ impl Proxy
         if all_verify_flag 
         { 
             // Merge commitment
-            let vss_commitments_vec:Vec<Vec<Point<Secp256k1>>> = msg_vec.iter().map(|msg|msg.vss_scheme.commitments.clone()).collect();
-            let total_vss_commitments = vss_commitments_vec
-            .iter()
-            .fold(vec![Point::<Secp256k1>::zero();vss_commitments_vec.len()], |acc,v| 
-                { 
-                    acc.iter()
-                    .zip(v.iter())
-                    .map(|(a,b)| a+b)
-                    .collect()
-                }
-            );
+            let vss_commitments_vec:Vec<Vec<String>> = msg_vec.iter().map(|msg|msg.vss_scheme.commitments.clone()).collect();
+            let num_columns = vss_commitments_vec[0].len(); // 假设所有行的列数相同
+
+            let mut total_vss_commitments: Vec<String> = Vec::new();
+        
+            for col in 0..num_columns {
+                let column_result: String = vss_commitments_vec.iter().map(|row| &row[col]).fold(get_qfi_zero(), qfi_add);
+                total_vss_commitments.push(column_result);
+            }
+            // let total_vss_commitments = vss_commitments_vec
+            // .iter()
+            // .fold(vec![get_qfi_zero();vss_commitments_vec.len()], |acc,v| 
+            //     { 
+            //         acc.iter()
+            //         .zip(v.iter())
+            //         .map(|(a,b)| qfi_add(a, b))
+            //         .collect()
+            //     }
+            // );
             
             // Merge CL share
             let share_proof_map_vec:Vec<HashMap<u16, EncAndProof>> = msg_vec.iter().map(|msg| msg.share_proof_map.clone()).collect();
@@ -92,7 +106,7 @@ impl Proxy
                         sender:self.id.clone(),
                         role:self.role.clone(),
                         share_enc_sum,
-                        vss_scheme_sum:VerifiableSS 
+                        vss_scheme_sum:IntegerVss
                         { 
                             parameters: 
                             ShamirSecretSharing 
@@ -121,21 +135,21 @@ impl Proxy
         // Verify zkp
         let gpk = self.gpk.clone().unwrap();
         let mut all_zkp_flag = true;
-        for msg in &msg_vec
-        {
-            let g_z_gamma_A = &gpk.g * &msg.zkp_proof.z_gamma_A_i;
-            let flag = if (
-                (g_z_gamma_A == &msg.zkp_proof.g_t + &msg.zkp_proof.g_gamma_A_i * &msg.zkp_proof.e)
-            )
-            {
-                true
-            }
-            else
-            {
-                false
-            };
-            all_zkp_flag = all_zkp_flag && flag;
-        };
+        // for msg in &msg_vec
+        // {
+        //     let g_z_gamma_A = &gpk.g * &msg.zkp_proof.z_gamma_A_i;
+        //     let flag = if (
+        //         (g_z_gamma_A == &msg.zkp_proof.g_t + &msg.zkp_proof.g_gamma_A_i * &msg.zkp_proof.e)
+        //     )
+        //     {
+        //         true
+        //     }
+        //     else
+        //     {
+        //         false
+        //     };
+        //     all_zkp_flag = all_zkp_flag && flag;
+        // };
 
         if all_zkp_flag
         {

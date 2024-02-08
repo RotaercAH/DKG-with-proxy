@@ -1,6 +1,9 @@
+use curv::BigInt;
+use curv::arithmetic::Samplable;
 use log::info;
 use curv::elliptic::curves::{Secp256k1, Scalar};
 use cl_encrypt::cl::clwarpper::*;
+use num::Num;
 use crate::config::config::Config;
 use crate::node::{Node,DKGParam};
 use message::proxy::setup_msg::{ProxySetupPhaseBroadcastMsg,ProxySetupPhaseFinishFlag};
@@ -13,7 +16,8 @@ impl Node{
     /// 初始化自身信息，加载配置，生成cl密钥对等
     pub fn init(gs_tbk_config:Config) -> Self
     {
-        let cl_sk = FE::random().to_bigint().to_string();
+        let bound = BigInt::from_str_radix("519825222697581994973081647134787959795934971297792", 10).unwrap();
+        let cl_sk = BigInt::sample_range(&BigInt::from(0), &bound).to_string();
         //计算公钥
         let cl_pk = public_key_gen(cl_sk.clone());
         let cl_keypair = CLKeypair{sk:cl_sk, pk:cl_pk};

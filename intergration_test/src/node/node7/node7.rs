@@ -18,11 +18,11 @@ use message::node::common_msg::{SetupMsg, KeyGenMsg};
 pub async fn main() -> Result<(), anyhow::Error> 
 {
     // 初始化 日志记录器
-    let log_path = String::from(env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/node/node6/config/config_file/log4rs.yaml";
+    let log_path = String::from(env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/node/node7/config/config_file/log4rs.yaml";
     log4rs::init_file(log_path, Default::default()).unwrap();
     
     //初始化node
-    let gs_tbk_config_path  = String::from(std::env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/node/node6/config/config_file/node_config.json";
+    let gs_tbk_config_path  = String::from(std::env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/node/node7/config/config_file/node_config.json";
     let gs_tbk_config:Config = serde_json::from_str(&Config::load_config(&gs_tbk_config_path)).unwrap();
 
     //将node设置成共享变量以便在async中能够修改
@@ -37,7 +37,7 @@ pub async fn main() -> Result<(), anyhow::Error>
     //开启节点监听接口
     let node_addr:SocketAddr = node.address.parse()?;
     let listener = TcpListener::bind(node_addr).await?;
-    info!("node6 is listening on {}",node.address);
+    info!("node7 is listening on {}",node.address);
 
     //向proxy发送消息，代码，启动
     let node_setup_msg_str = serde_json::to_string(&message::common_msg::GSTBKMsg::GSTBKMsgN(message::node::common_msg::GSTBKMsg::SetupMsg(SetupMsg::NodeToProxySetupPhaseP2PMsg(node.setup_phase_one())))).unwrap();
@@ -202,7 +202,7 @@ pub async fn main() -> Result<(), anyhow::Error>
                                     let node = (*locked_node).clone();
                                     let node_str = serde_json::to_string(&get_node_config(node)).unwrap();
                                     let mut node_path  = std::env::current_dir().unwrap();
-                                    let path = "src/node/node6/info/keygen.json";
+                                    let path = "src/node/node7/info/keygen.json";
                                     node_path.push(path);
                                     std::fs::write(node_path, node_str).unwrap();
                                 }
