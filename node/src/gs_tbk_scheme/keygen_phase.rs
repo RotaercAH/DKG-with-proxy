@@ -1,23 +1,16 @@
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::path::PathBuf;
-use anyhow::Chain;
-use cl_encrypt::vss::vss::integer_share_at_indices;
+use cl_encrypt::vss::vss::{integer_share_at_indices, integer_map_share_to_new_params};
 use curv::arithmetic::traits::*;
-use curv::cryptographic_primitives::commitments::hash_commitment::HashCommitment;
-use curv::cryptographic_primitives::commitments::traits::Commitment;
-use curv::cryptographic_primitives::hashing::DigestExt;
-use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
-use curv::elliptic::curves::{Secp256k1, Point, Scalar};
+use curv::elliptic::curves::{Secp256k1, Scalar};
 pub type FE = Scalar<Secp256k1>;
 use curv::BigInt;
 use log::info;
-use sha2::{Sha256, Digest};
-use num_bigint::BigUint;
 use cl_encrypt::cl::clwarpper::*;
 use crate::Error::{self, InvalidSS};
-use message::proxy::keygen_msg::{ProxyKeyGenPhaseOneBroadcastMsg,ProxyToNodeKeyGenPhaseThreeP2PMsg,ProxyToNodesKeyGenPhasefiveBroadcastMsg};
-use message::node::keygen_msg::{NodeKeyGenPhaseOneBroadcastMsg,NodeToProxyKeyGenPhaseTwoP2PMsg,ZkpProof,NodeToProxyKeyGenPhaseFiveP2PMsg, EncAndProof};
+use message::proxy::keygen_msg::{ProxyKeyGenPhaseOneBroadcastMsg,ProxyToNodeKeyGenPhaseThreeP2PMsg};
+use message::node::keygen_msg::{NodeKeyGenPhaseOneBroadcastMsg,NodeToProxyKeyGenPhaseTwoP2PMsg, NodeKeyGenPhaseFiveBroadcastMsg, EncAndProof};
 use message::params::{Gpk};
 use crate::node::{Node};
 use std::io::prelude::*;
@@ -35,14 +28,14 @@ impl Node {
         };
         self.gpk = Some(gpk);
         self.participants = Some(msg.participants);
+      
         let secret_bound = BigInt::from_str_radix("519825222697581994973081647134787959795934971297792", 10).unwrap();
         let ui = BigInt::sample_below(&secret_bound);
         
         let yi: String = power_of_h(ui.to_string());//gp_ui
         
-        self.dkgparam.ui = Some(ui);
+        self.dkgparam.ui = Some(ui.clone());
         self.dkgparam.yi = Some(yi.clone());
-
         // let blind_factor = BigInt::sample(256);
         // let com = HashCommitment::<Sha256>::create_commitment_with_user_defined_randomness(
         //     &BigInt::from_bytes(yi.clone().to_bytes(true).as_ref()),
@@ -80,10 +73,9 @@ impl Node {
                 yi_map.insert(msg.sender, msg.yi.clone());
                 y = qfi_add(y, &msg.yi.clone())
             }
-            // let y:String = msg_vec.iter().map(|msg| msg.yi.clone());
+            
             self.dkgparam.yi_map = Some(yi_map);
             self.dkgparam.y = Some(y.clone());
-            info!("pk = {:?}", y);
             //将公钥写入文件
             let current_dir = std::env::current_dir().unwrap(); // 获取当前工作目录
             let mut output_path = PathBuf::from(current_dir); // 创建路径缓冲区并设置为当前工作目录
@@ -99,14 +91,14 @@ impl Node {
             let dkgparam = self.dkgparam.clone();
             //生成系数承诺和函数值
             let coefficients_bound = BigInt::from_str_radix("519825222697581994973081647134787959795934971297792", 10).unwrap();
+            // let coefficients_bound = BigInt::from_str_radix(" 115792089237316195423570985008687907852837564279074904382605163141518161494337", 10).unwrap();
+
+           
             let (vss_scheme, secret_shares) =
             integer_share_at_indices(self.threashold_param.threshold, self.threashold_param.share_counts, dkgparam.ui.unwrap(), coefficients_bound.clone());
-            // let shares = secret_shares.to_vec();
+            
             let mut share_proof_map:HashMap<u16, EncAndProof> = HashMap::new();
-            let mut delta = BigInt::one();
-            for i in 1..=self.threashold_param.share_counts{
-                delta *= BigInt::from(i);
-            }
+           
             for node in self.node_info_vec.as_ref().unwrap()
             { 
                 let id = node.id; 
@@ -116,12 +108,12 @@ impl Node {
                 let random_str = BigInt::sample_below(&coefficients_bound.clone()).to_string();
 
                 let commit_str = power_of_h(share_str.clone()); // 函数值承诺 gp ^ f(i)
-                // let commit_str = to_hex(share_commit.to_bytes(true).as_ref());
                 
                 //加密
-                let share_enc = encrypt(node.cl_pk.clone(), share_str.clone(), random_str.clone());
+                let share_enc = encrypt_enc(node.cl_pk.clone(), share_str.clone(), random_str.clone());
                 //零知识证明
                 let share_proof = cl_enc_com_prove(node.cl_pk.clone(), share_enc.clone(), commit_str.clone(), share_str.clone(), random_str.clone());
+                // let share_proof: String = "null".to_string();
 
                 let enc_and_proof = EncAndProof
                 {
@@ -150,20 +142,15 @@ impl Node {
     }
 
     /// 解密share，然后进行系数承诺验证
-    pub fn keygen_phase_four(&mut self, msg:ProxyToNodeKeyGenPhaseThreeP2PMsg, )->Result<(), Error>
+    pub fn keygen_phase_four(&mut self, msg:ProxyToNodeKeyGenPhaseThreeP2PMsg,) ->Result<(), Error>
     {
         // Decrypt CL share
-        let x_i = decrypt(self.cl_keypair.sk.clone(), msg.share_enc_sum);
-        let mut delta = BigInt::one();
-        for i in 1..=self.threashold_param.share_counts{
-            delta *= BigInt::from(i);
-        }
-        
-        if msg.vss_scheme_sum.validate_share(&BigInt::from_str_radix(&x_i, 10).unwrap(), self.id.unwrap().to_string(), &delta).is_ok()
+        let x_i = decrypt_enc(self.cl_keypair.sk.clone(), msg.share_enc_sum);
+        if msg.vss_scheme_sum.validate_share(&BigInt::from_str_radix(&x_i, 10).unwrap(), self.id.unwrap().to_string(), &self.delta).is_ok()
         {
             self.dkgparam.mskshare = Some(x_i.clone());
-            // info!("xi_fe is generated!");
-            // info!("xi_fe = {:?}", x_i);
+            
+            info!("xi_fe = {:?}", x_i);
             //将私钥写入文件
             let current_dir = std::env::current_dir().unwrap(); // 获取当前工作目录
             let mut output_path = PathBuf::from(current_dir); // 创建路径缓冲区并设置为当前工作目录
@@ -184,43 +171,6 @@ impl Node {
             Err(InvalidSS)
         }
             
-    }
-
-    /// 作零知识证明，发送proof
-    pub fn keygen_phase_five(&self) -> NodeToProxyKeyGenPhaseFiveP2PMsg
-    {
-        let gpk = self.gpk.as_ref().unwrap();
-
-        let t_rand = Scalar::<Secp256k1>::random();
-        let g_t = &gpk.g * &t_rand;
-
-        // challenge
-        let e = Sha256::new() 
-        .chain_point(&gpk.g)
-        .chain_bigint(&BigInt::from_str_radix(&self.dkgparam.yi_map.as_ref().unwrap().get(&self.id.unwrap().clone()).unwrap(), 10).unwrap())
-        .chain_point(&g_t)
-        .result_scalar();
-
-        // challenge response
-        let z_gamma_A_i = &t_rand + &e;
-
-        NodeToProxyKeyGenPhaseFiveP2PMsg
-        {
-            sender:self.id.unwrap(),
-            role:self.role.clone(),
-            zkp_proof:ZkpProof 
-            { 
-                z_gamma_A_i: z_gamma_A_i, 
-                g_gamma_A_i: self.dkgparam.yi.as_ref().unwrap().clone(),
-                e: e, 
-                g_t: g_t, 
-            },
-        }
-    }
-    
-    /// 接收然后组合出完整的GPK
-    pub fn keygen_phase_six(&mut self,msg:ProxyToNodesKeyGenPhasefiveBroadcastMsg)
-    {
     }
 
 }

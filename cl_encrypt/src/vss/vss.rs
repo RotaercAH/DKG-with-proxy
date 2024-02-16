@@ -98,7 +98,7 @@ pub fn integer_share_at_indices(
     for i in 1..=n{
         delta *= BigInt::from(i);
     }
-
+    
     coefficients[0] = secret.clone() * delta.clone();
 
     let secret_shares = evaluate_polynomial_integer(coefficients.clone(), n);
@@ -331,49 +331,32 @@ fn test_vss_run_time() {
 }
 
 #[test]
-fn test_integer_vss_3_out_of_6() {
-  
+fn test_integer_vss_2_out_of_4() {
     let bound = BigInt::from_str_radix("519825222697581994973081647134787959795934971297792", 10).unwrap();
-    let secret = BigInt::from_str_radix("2044", 16).unwrap();
+    let secret = BigInt::from_str_radix("2044", 10).unwrap();
     let mut delta = BigInt::one();
-    for i in 1..=6 as u16 {
+    for i in 1..=100 as u16 {
         delta *= BigInt::from(i);
     }
+    println!("delta * share: {:?} ", delta * 2044);
     let mut index_vec = Vec::new();
-    for i in 1..=6 as u16 {
+    for i in 1..=4 as u16 {
         index_vec.push(i.to_string());
     }
-    
-    let (_vss_scheme, shares) = integer_share_at_indices(3, 6, secret.clone(), bound);
+    let (_vss_scheme, shares) = integer_share_at_indices(30, 100, secret.clone(), bound);
     println!("vss_share: {:?} ", shares);
-    // let mut shares1: Vec<BigInt> = Vec::new();
-    // shares1.push(shares.get(&"1".to_string()).unwrap().clone());
-    // shares1.push(shares.get(&"2".to_string()).unwrap().clone());
-    // shares1.push(shares.get(&"3".to_string()).unwrap().clone());
-    // shares1.push(shares.get(&"4".to_string()).unwrap().clone());
-    // shares1.push(shares.get(&"5".to_string()).unwrap().clone());
-    // shares1.push(shares.get(&"6".to_string()).unwrap().clone());
-
-    // println!("{:?}", shares1);
-
-    // let lagrange_vec = vec![BigInt::from_str_radix("1", 16).unwrap(), BigInt::from_str_radix("3", 16).unwrap(), BigInt::from_str_radix("5", 16).unwrap(), BigInt::from_str_radix("6", 16).unwrap()];
-    // let l1 = integer_map_share_to_new_params(BigInt::from_str_radix("1", 16).unwrap(), &lagrange_vec, 6);
+    // println!("commitment0: {:?} ", _vss_scheme.commitments.get(0));
+    // let lagrange_vec = vec![BigInt::from_str_radix("1", 16).unwrap(), BigInt::from_str_radix("2", 16).unwrap(), BigInt::from_str_radix("3", 16).unwrap()];
+    // let l1 = integer_map_share_to_new_params(BigInt::from_str_radix("1", 10).unwrap(), &lagrange_vec, 4);
     // println!("l1 : {:?}", l1);
-    // let l3 = integer_map_share_to_new_params(BigInt::from_str_radix("3", 16).unwrap(), &lagrange_vec, 6);
+    // let l2 = integer_map_share_to_new_params(BigInt::from_str_radix("2", 10).unwrap(), &lagrange_vec, 4);
+    // println!("l2 : {:?}", l2);
+    // let l3 = integer_map_share_to_new_params(BigInt::from_str_radix("3", 10).unwrap(), &lagrange_vec, 4);
     // println!("l3 : {:?}", l3);
-    // let l5 = integer_map_share_to_new_params(BigInt::from_str_radix("5", 16).unwrap(), &lagrange_vec, 6);
-    // println!("l5 : {:?}", l5);
-    // let l6 = integer_map_share_to_new_params(BigInt::from_str_radix("6", 16).unwrap(), &lagrange_vec, 6);
-    // println!("l6 : {:?}", l6);
-    // let w = l1 * shares.get(&"1".to_string()).unwrap().clone() + 
-    // l3 * shares.get(&"3".to_string()).unwrap().clone() + 
-    // l5 * shares.get(&"5".to_string()).unwrap().clone() + 
-    // l6 * shares.get(&"6".to_string()).unwrap().clone();
+    // let w = l1 * shares.get(0).unwrap() + l2 * shares.get(1).unwrap()  + l3 * shares.get(2).unwrap();
     // println!("w : {:?}", w);
     // let s_delta = secret * delta.clone() * delta.clone();
     // println!("s_delta : {:?}", s_delta);
-
-     _vss_scheme.validate_share(&shares[2], "3".to_string(), &delta);
 }
 
 #[test]
@@ -384,7 +367,6 @@ fn test_vss_1_out_of_3() {
     let point2 = BigInt::from_str_radix("22", 16).unwrap();
     let point3 = BigInt::from_str_radix("33", 16).unwrap();
     // let g = Point::generator();
-
 
     let index_vec = vec!["11".to_string(), "22".to_string(), "33".to_string()];
     let (_vss_scheme, shares) = share_at_indices(1, 3, &fe, &index_vec);

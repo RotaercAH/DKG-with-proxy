@@ -6,7 +6,7 @@ use cl_encrypt::cl::clwarpper::*;
 use num::Num;
 use crate::config::config::Config;
 use crate::node::{Node,DKGParam};
-use message::proxy::setup_msg::{ProxySetupPhaseBroadcastMsg,ProxySetupPhaseFinishFlag};
+use message::proxy::setup_msg::{ProxySetupPhaseBroadcastMsg};
 use message::node::setup_msg::{NodeToProxySetupPhaseP2PMsg,NodeSetupPhaseFinishFlag};
 use message::params::{CLKeypair};
 
@@ -21,23 +21,23 @@ impl Node{
         //计算公钥
         let cl_pk = public_key_gen(cl_sk.clone());
         let cl_keypair = CLKeypair{sk:cl_sk, pk:cl_pk};
-        // info!("cl_key_str in setup {:?}", clkey_str);
+        let mut delta = BigInt::from(1);
+        for i in 1..= gs_tbk_config.threshold_params.share_counts{
+            delta *= BigInt::from(i);
+        }
+       
         Self
-        { 
+        {
             id:None,
             role:"Group Manager Node".to_string(),
             address:gs_tbk_config.node_addr,
             proxy_address:gs_tbk_config.proxy_addr,
             threashold_param:gs_tbk_config.threshold_params,
             cl_keypair:cl_keypair,
+            delta:delta,
             dkgparam:DKGParam{ui:None,yi:None,yi_map:None,y:None,mskshare:None,addshare:None},
-            // dkgparams:DKGParams
-            // { 
-            //     dkgparam_A:Some(DKGParam{ui:None,yi:None,yi_map:None,y:None,mskshare:None,addshare:None}),
-            // },
             gpk:None,
             node_info_vec:None,
-
             participants:None,
         }
         
@@ -51,9 +51,7 @@ impl Node{
         {
             role:self.role.clone(),
             cl_pk:self.cl_keypair.pk.clone(),
-            // pk_hex:pk_to_hex(&self.clkeys.pk.clone()),
             address:self.address.clone(),
-           
         }
 
     }
@@ -76,7 +74,7 @@ impl Node{
         }
     }
 
-    pub fn setup_phase_three(&self,flag:ProxySetupPhaseFinishFlag)
+    pub fn setup_phase_three(&self)
     {
         info!("Setup phase is finished!")
     }
@@ -87,8 +85,4 @@ impl Node{
 #[test]
 fn test()
 {
-    let gs_tbk_config_path  = String::from(std::env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/config/config_files/gs_tbk_config.json";
-    let gs_tbk_config:Config = serde_json::from_str(&Config::load_config(&gs_tbk_config_path)).unwrap();
-    let node = Node::init(gs_tbk_config);
-    //println!("{:?}",node);
 }

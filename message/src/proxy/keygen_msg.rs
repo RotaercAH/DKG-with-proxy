@@ -1,7 +1,5 @@
 use cl_encrypt::vss::vss::IntegerVss;
-use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
 use curv::{elliptic::curves::{Secp256k1, Point}};
-use num::Integer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -26,10 +24,9 @@ pub struct ProxyToNodeKeyGenPhaseThreeP2PMsg
     pub vss_scheme_sum:IntegerVss,
 }
 
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ProxyToNodesKeyGenPhasefiveBroadcastMsg
-{
-    pub sender:u16,
-    pub role:String,
-}
+// #[derive(Clone, Debug, Serialize, Deserialize)]
+// pub struct ProxyToNodesKeyGenPhasefiveBroadcastMsg
+// {
+//     pub sender:u16,
+//     pub role:String,
+// }

@@ -719,6 +719,7 @@ dependencies = [
  "anyhow",
  "bincode",
  "chrono",
+ "cl_encrypt",
  "crossbeam-channel",
  "curv-kzen",
  "log",

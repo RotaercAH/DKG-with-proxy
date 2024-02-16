@@ -53,6 +53,13 @@ pub fn keygen_to_gstbk(msg_keygen : message::node::common_msg::KeyGenMsg)->Strin
     return msg_str;
 }
 
+///dec阶段序列化消息
+pub fn dec_to_gstbk(msg_dec : message::node::common_msg::DecMsg)->String
+{
+    let msg_str = serde_json::to_string(&message::common_msg::GSTBKMsg::GSTBKMsgN(message::node::common_msg::GSTBKMsg::DecMsg(msg_dec))).unwrap();
+    return msg_str;
+}
+
 // ///KeyManage阶段序列化消息
 // pub fn key_manage_to_gstbk (msg_key_manage : gs_tbk_scheme::messages::node::common_msg::KeyManageMsg) -> String
 // {

@@ -1,15 +1,17 @@
 use std::collections::HashMap;
+use std::fs::{OpenOptions, File};
+use std::io::Write;
+use std::path::PathBuf;
 use cl_encrypt::vss::vss::IntegerVss;
-use curv::BigInt;
 use curv::elliptic::curves::{Secp256k1, Point, Scalar};
-use curv::cryptographic_primitives::secret_sharing::feldman_vss::{VerifiableSS,ShamirSecretSharing};
+use curv::cryptographic_primitives::secret_sharing::feldman_vss::{ShamirSecretSharing};
 use log::{info};
 use cl_encrypt::cl::clwarpper::*;
-use message::proxy::keygen_msg::{ProxyKeyGenPhaseStartFlag,ProxyKeyGenPhaseOneBroadcastMsg,ProxyToNodeKeyGenPhaseThreeP2PMsg,ProxyToNodesKeyGenPhasefiveBroadcastMsg};
-use message::node::keygen_msg::{NodeToProxyKeyGenPhaseTwoP2PMsg,NodeToProxyKeyGenPhaseFiveP2PMsg, EncAndProof};
+use message::proxy::keygen_msg::{ProxyKeyGenPhaseStartFlag,ProxyKeyGenPhaseOneBroadcastMsg,ProxyToNodeKeyGenPhaseThreeP2PMsg};
+use message::node::keygen_msg::{NodeToProxyKeyGenPhaseTwoP2PMsg, EncAndProof};
 use rand::seq::SliceRandom;
 use crate::proxy::{Proxy};
-use crate::Error::{self,InvalidSS};
+use crate::Error::{self};
 use message::params::{Gpk};  
 
 impl Proxy 
@@ -51,10 +53,7 @@ impl Proxy
         let mut all_verify_flag = true;
         let share_proof_map_vec:Vec<HashMap<u16, EncAndProof>> = msg_vec.iter().map(|msg|msg.share_proof_map.clone()).collect();
         let vss_commitments_vec:Vec<IntegerVss> = msg_vec.iter().map(|msg|msg.vss_scheme.clone()).collect();
-        let mut delta = BigInt::from(1);
-            for i in 1..=self.threashold_param.share_counts{
-                delta *= BigInt::from(i);
-            }
+        
         for node in self.node_info_vec.as_ref().unwrap()
         {
             for i in 0 .. share_proof_map_vec.len(){
@@ -62,7 +61,8 @@ impl Proxy
                 let vss_commitments = vss_commitments_vec.get(i).unwrap();
                 let share_proof_info = share_proof_map.get(&node.id).unwrap();
                 let proof_verify_str = cl_enc_com_verify(share_proof_info.share_proof.clone(), node.cl_pk.clone(), share_proof_info.share_enc.clone(), share_proof_info.share_commit.clone());
-                let commit_verify_str = vss_commitments.verify_point_commitment(node.id.to_string(), share_proof_info.share_commit.clone(), &delta);
+                // let proof_verify_str = "true";
+                let commit_verify_str = vss_commitments.verify_point_commitment(node.id.to_string(), share_proof_info.share_commit.clone(), &self.delta);
                 let flag;
                 if proof_verify_str == "true" && commit_verify_str == "true" {flag = true;}
                 else{flag = false;} 
@@ -81,25 +81,28 @@ impl Proxy
                 let column_result: String = vss_commitments_vec.iter().map(|row| &row[col]).fold(get_qfi_zero(), qfi_add);
                 total_vss_commitments.push(column_result);
             }
-            // let total_vss_commitments = vss_commitments_vec
-            // .iter()
-            // .fold(vec![get_qfi_zero();vss_commitments_vec.len()], |acc,v| 
-            //     { 
-            //         acc.iter()
-            //         .zip(v.iter())
-            //         .map(|(a,b)| qfi_add(a, b))
-            //         .collect()
-            //     }
-            // );
-            
+
+           //将公钥写入文件
+           let current_dir = std::env::current_dir().unwrap(); // 获取当前工作目录
+           let mut output_path = PathBuf::from(current_dir); // 创建路径缓冲区并设置为当前工作目录
+           let path = "src/proxy".to_string() + "/publickey.txt";
+           output_path.push(path); // 添加下级目录
+           let file = File::create(output_path.clone());
+           // 将字符串内容写入文件，检查是否出现错误
+           match file.unwrap().write_all(total_vss_commitments.get(0).unwrap().as_bytes()) {
+               Ok(_) => println!("公钥已写入文件publickey.txt"),
+               Err(err) => eprintln!("写入文件时出错: {}", err),
+           }
+
             // Merge CL share
             let share_proof_map_vec:Vec<HashMap<u16, EncAndProof>> = msg_vec.iter().map(|msg| msg.share_proof_map.clone()).collect();
             let mut msg_map:HashMap<u16, ProxyToNodeKeyGenPhaseThreeP2PMsg> = HashMap::new(); 
             for node in self.node_info_vec.as_ref().unwrap()
             {
                 let random = Scalar::<Secp256k1>::random().to_bigint().to_string();
-                let c_zero = encrypt(node.cl_pk.clone(), "0".to_string(), random.clone());
-                let share_enc_sum:String = share_proof_map_vec.iter().fold(c_zero, |acc,v|{add_ciphertexts(acc, v.get(&node.id).as_ref().unwrap().share_enc.clone())});
+                let c_zero = encrypt_enc(node.cl_pk.clone(), "0".to_string(), random.clone());
+                let share_enc_sum:String = share_proof_map_vec.iter().fold(c_zero, |acc,v|{add_ciphertexts_enc(acc, v.get(&node.id).as_ref().unwrap().share_enc.clone())});
+           
                 msg_map.insert
                 (node.id.clone(), ProxyToNodeKeyGenPhaseThreeP2PMsg
                     {
@@ -119,56 +122,13 @@ impl Proxy
                     }
                 );
             }
+
             Ok(msg_map)
         }
         else  
         { 
             Err(Error::InvalidZkp)
         }
-    }
-
-    /// 验证零知识证明，然后组合出完整的GPK
-    pub fn keygen_phase_five(&mut self,msg_vec:Vec<NodeToProxyKeyGenPhaseFiveP2PMsg>)
-    ->Result<ProxyToNodesKeyGenPhasefiveBroadcastMsg,Error>
-    {
-        assert_eq!(msg_vec.len(), self.threashold_param.share_counts as usize);
-        // Verify zkp
-        let gpk = self.gpk.clone().unwrap();
-        let mut all_zkp_flag = true;
-        // for msg in &msg_vec
-        // {
-        //     let g_z_gamma_A = &gpk.g * &msg.zkp_proof.z_gamma_A_i;
-        //     let flag = if (
-        //         (g_z_gamma_A == &msg.zkp_proof.g_t + &msg.zkp_proof.g_gamma_A_i * &msg.zkp_proof.e)
-        //     )
-        //     {
-        //         true
-        //     }
-        //     else
-        //     {
-        //         false
-        //     };
-        //     all_zkp_flag = all_zkp_flag && flag;
-        // };
-
-        if all_zkp_flag
-        {
-            info!("Keygen phase is finished!");
-            println!("Keygen phase is finished!");
-            Ok(
-                ProxyToNodesKeyGenPhasefiveBroadcastMsg
-                {
-                    sender:self.id,
-                    role:self.role.clone()
-                }
-            )
-        }
-        else 
-        {
-            Err(InvalidSS)      
-        }
-        
-
     }
 
 }

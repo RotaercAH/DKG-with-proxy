@@ -2,8 +2,6 @@ use std::collections::HashMap;
 use cl_encrypt::vss::vss::IntegerVss;
 use curv::elliptic::curves::{Point, Secp256k1, Scalar};
 use serde::{Deserialize, Serialize};
-use curv::BigInt;
-use curv::cryptographic_primitives::secret_sharing::feldman_vss::VerifiableSS;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeKeyGenPhaseOneBroadcastMsg
 {
@@ -41,9 +39,10 @@ pub struct ZkpProof
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NodeToProxyKeyGenPhaseFiveP2PMsg
+pub struct NodeKeyGenPhaseFiveBroadcastMsg
 {
     pub sender:u16,
     pub role:String,
-    pub zkp_proof:ZkpProof,
+    pub dec_c1:String,
+    pub cipher:String
 }

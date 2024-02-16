@@ -9,6 +9,7 @@ edition = "2021"
 message = { path = "../message"}
 node ={ path = "../node"}
 proxy = {path = "../proxy"}
+cl_encrypt = {path = "../cl_encrypt"}
 
 curv = { package = "curv-kzen", git="https://github.com/ZenGo-X/curv.git", rev="44537a74"}
 sha2 = "0.9"

@@ -9,14 +9,190 @@ use std::env;
 use log::{error, info, warn};
 
 use proxy::communication::communication::*;
-use message::proxy::common_msg::{SetupMsg, KeyGenMsg};
+use message::proxy::common_msg::{SetupMsg, KeyGenMsg, DecMsg};
 use proxy::proxy::Proxy;
 use proxy::config::config::Config;
 use message::node::setup_msg::{NodeToProxySetupPhaseP2PMsg,NodeSetupPhaseFinishFlag};
-use message::node::keygen_msg::{NodeToProxyKeyGenPhaseTwoP2PMsg,NodeToProxyKeyGenPhaseFiveP2PMsg};
+use message::node::keygen_msg::{NodeToProxyKeyGenPhaseTwoP2PMsg};
 use message::common_msg::{GSTBKMsg};
 // use gs_tbk_scheme::messages::node::key_manage_msg::{NodeToProxyKeyRecoverP2PMsg,NodeToProxyKeyRefreshOneP2PMsg};
 
+#[tokio::main]
+pub async fn decrypt () -> Result<(), anyhow::Error> 
+{
+    // 初始化 日志记录器
+    let log_path = String::from(env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/proxy/config/config_file/log4rs.yaml";
+    log4rs::init_file(log_path, Default::default()).unwrap();
+    
+    // 初始化
+    let gs_tbk_config_path  = String::from(std::env::current_dir().unwrap().as_path().to_str().unwrap())+"/src/proxy/config/config_file/proxy_config.json";
+    let gs_tbk_config:Config = serde_json::from_str(&Config::load_config(&gs_tbk_config_path)).unwrap();
+    let proxy = Proxy::init(gs_tbk_config);
+
+    // 创建setup阶段的一些共享变量
+    let shared_node_setup_p2p_msg_vec = Arc::new(TokioMutex::new(Vec::<NodeToProxySetupPhaseP2PMsg>::new()));
+    let setup_msg_num = Arc::new(TokioMutex::new(0));
+    let setup_finish_num = Arc::new(TokioMutex::new(0));
+    let shared_node_setup_finish_vec = Arc::new(TokioMutex::new(Vec::<NodeSetupPhaseFinishFlag>::new()));
+    
+    // 开启代理的监听端口
+    let proxy_addr:SocketAddr = proxy.address.parse()?;
+    let listener = TcpListener::bind(proxy_addr).await?;
+    info!("Proxy_node is listening on {}",proxy_addr);
+    let shared_proxy = Arc::new(TokioMutex::new(proxy));// 定义共享
+    
+    // 循环接收消息
+    while let Result::Ok(( tcp_stream,_)) = listener.accept().await 
+    {
+        // 拷贝共享代理结构体
+        let proxy_clone = shared_proxy.clone();
+
+        // 拷贝共享变量
+        let shared_node_setup_p2p_msg_vec_clone = shared_node_setup_p2p_msg_vec.clone();
+        let msg_num_clone = setup_msg_num.clone();                            
+        let finish_num_clone = setup_finish_num.clone();
+        let node_setup_finish_vec_clone = shared_node_setup_finish_vec.clone();
+    
+        
+        //let open_two_vec_clone = shared_ntp_open_two_vec.clone();
+        tokio::spawn(async move
+        {
+            let proxy = proxy_clone.clone();
+            //接收并拆分出消息
+            let framed = Framed::new( tcp_stream,LinesCodec::new());
+            let message = match get_message(framed).await 
+            {
+                Ok(v) => v,
+                Err(e) => 
+                {
+                    error!("Failed to get node's message: {:?}",e);
+                    return ;
+                } 
+            };
+            //对不同的消息类型做处理
+            match message 
+            {
+                GSTBKMsg::GSTBKMsgN(gstbkn_msg) => 
+                {
+                    match gstbkn_msg 
+                    {
+                        message::node::common_msg::GSTBKMsg::SetupMsg(setup_msg) =>  
+                        { 
+                            match setup_msg 
+                            {
+                                message::node::common_msg::SetupMsg::NodeToProxySetupPhaseP2PMsg(msg) => 
+                                {
+                                    info!("From Role : {}, Get NodeToProxySetupPhaseP2PMsg", msg.role);
+                                    let node_setup_p2p_msg_vec = shared_node_setup_p2p_msg_vec_clone.clone();
+                                    let msg_num = msg_num_clone.clone(); 
+                                    let mut locked_proxy = proxy.lock().await;                           
+                                    handle_setup_msg(msg,&node_setup_p2p_msg_vec,&msg_num).await;
+                                    //判断收到的消息是否达到了n
+                                    if *msg_num.lock().await == (locked_proxy.threashold_param.share_counts as i32) 
+                                    {
+                                        //info!("Setup phase is starting!");
+                                        //等待一秒，等所有的节点监听接口都能打开
+                                        let duration = Duration::from_secs(1);
+                                        sleep(duration); 
+                                        //生成proxy_setup_msg 
+                                        let msg_vec = (*node_setup_p2p_msg_vec.lock().await).clone();
+                                        let setup_msg_str = setup_to_gstbk(SetupMsg::ProxySetupPhaseBroadcastMsg(locked_proxy.setup_phase_one(msg_vec)));
+                                        //广播
+                                        let node_list = locked_proxy.node_info_vec.clone().unwrap(); 
+                                        match broadcast(setup_msg_str, node_list).await{
+                                            Ok(_) => 
+                                            {
+                                                //println!("ProxySetupBroadcastMsg have send");
+                                            }
+                                            Err(e) => 
+                                            {
+                                                error!("Error!: {}, ProxySetupBroadcastMsg can not send ",e);
+                                                return ;
+                                            }
+                                        };
+                                    }
+                                    else 
+                                    {
+                                        warn!("Insufficient number of messages, and current number is {:?}", msg_num);
+                                        return;
+                                    }
+                                }
+                                message::node::common_msg::SetupMsg::NodeSetupPhaseFinishFlag(msg) => 
+                                {
+                                    info!("From id : {}, Role : {}, Get NodeSetupPhaseFinishFlag",msg.sender,msg.role);
+                                    let node_setup_finish_vec = node_setup_finish_vec_clone.clone();
+                                    let finish_num = finish_num_clone.clone();
+                                    let mut locked_proxy = proxy.lock().await;
+                                    handle_setup_tag(msg,&node_setup_finish_vec,&finish_num).await;
+                                    //判断是否所有节点都发了
+                                    if *finish_num.lock().await == (locked_proxy.threashold_param.share_counts as i32) 
+                                    {
+                                        let setup_finish_flag_str = setup_to_gstbk(SetupMsg::ProxySetupPhaseFinishFlag(locked_proxy.setup_phase_two((*node_setup_finish_vec.lock().await).clone())));
+                                        //广播
+                                        let node_list = locked_proxy.node_info_vec.clone().unwrap(); 
+                                        match broadcast(setup_finish_flag_str, node_list).await
+                                        {
+                                            Ok(_) => {
+                                                //println!("ProxySetupFinishMsg have send");
+                                            }
+                                            Err(e) => {
+                                                error!("Error: {}, ProxySetupFinishMsg can not sent ",e);
+                                                return ;
+                                            }
+                                        };
+                                    }
+                                    else 
+                                    {
+                                        warn!("Insufficient number of messages, and current number is {:?}", finish_num);
+                                        return;
+                                    }
+
+                                    //生成Dec的消息
+                                    let (dec_start_flag,dec_phase_one_msg) = locked_proxy.dec_phase_one();
+                                    //处理发送proxy的Phaseone DecStartFlag
+                                    let dec_start_flag_str = dec_to_gstbk(DecMsg::ProxyDecPhaseStartFlag(dec_start_flag));
+                                    //广播
+                                    let node_list = locked_proxy.node_info_vec.clone().unwrap(); 
+                                    match broadcast(dec_start_flag_str, node_list.clone()).await
+                                    {
+                                        Ok(_) => 
+                                        {
+                                            //println!("ProxySetupFinishMsg have send");
+                                        }
+                                        Err(e) => 
+                                        {
+                                            error!("KeygenStartFlag can not sent Error: {}",e);
+                                            return ;
+                                        }
+                                    };
+                                    //处理发送proxy的Phase_one ProxyKeyGenPhaseOneBroadcastMsg
+                                    let dec_phase_one_msg_str = dec_to_gstbk(DecMsg::ProxyDecPhaseOneBroadcastMsg(dec_phase_one_msg));
+                                    //广播
+                                    match broadcast(dec_phase_one_msg_str, node_list.clone()).await
+                                    {
+                                        Ok(_) => 
+                                        {
+                                            //println!("ProxySetupFinishMsg have send");
+                                        }
+                                        Err(e) => 
+                                        {
+                                            error!("KeygenPhaseOneMsg can not sent Error: {}",e);
+                                            return ;
+                                        }
+                                    };
+                                }
+                                
+                            }
+                        }
+                        _ => {}  
+                    }
+                }
+                _ => {}
+            }
+        });
+    }
+    Ok(())
+}
 
 
 #[tokio::main]
@@ -38,8 +214,8 @@ pub async fn main () -> Result<(), anyhow::Error>
     let shared_node_setup_finish_vec = Arc::new(TokioMutex::new(Vec::<NodeSetupPhaseFinishFlag>::new()));
     
     // 创建KeyGen阶段的共享变量
-    let shared_keygen_phase_two_msg_A_vec = Arc::new(TokioMutex::new(Vec::<NodeToProxyKeyGenPhaseTwoP2PMsg>::new()));
-    let shared_keygen_phase_five_msg_vec = Arc::new(TokioMutex::new(Vec::<NodeToProxyKeyGenPhaseFiveP2PMsg>::new()));
+    let shared_keygen_phase_two_msg_vec = Arc::new(TokioMutex::new(Vec::<NodeToProxyKeyGenPhaseTwoP2PMsg>::new()));
+    // let shared_keygen_phase_five_msg_vec = Arc::new(TokioMutex::new(Vec::<NodeToProxyKeyGenPhaseFiveP2PMsg>::new()));
     
     // // 创建KeyManage阶段的共享变量
     // let shared_key_recover_msg_vec = Arc::new(TokioMutex::new(Vec::<NodeToProxyKeyRecoverP2PMsg>::new()));
@@ -65,8 +241,8 @@ pub async fn main () -> Result<(), anyhow::Error>
         let node_setup_finish_vec_clone = shared_node_setup_finish_vec.clone();
         
         //keygen阶段克隆
-        let keygen_phase_two_msg_vec_A_clone = shared_keygen_phase_two_msg_A_vec.clone();
-        let keygen_phase_five_msg_vec_clone = shared_keygen_phase_five_msg_vec.clone();
+        let keygen_phase_two_msg_vec_clone = shared_keygen_phase_two_msg_vec.clone();
+        // let keygen_phase_five_msg_vec_clone = shared_keygen_phase_five_msg_vec.clone();
 
         // //Key recover
         // let key_recover_msg_vec_clone = shared_key_recover_msg_vec.clone();
@@ -209,8 +385,8 @@ pub async fn main () -> Result<(), anyhow::Error>
                                 {
                                     info!("From id : {}, Role : {}, Get NodeSetupPhaseFinishFlag",msg.sender,msg.role);
                                     let locked_proxy = proxy.lock().await;
-                                    let keygen_phase_two_msg_vec_A = keygen_phase_two_msg_vec_A_clone.clone();
-                                    let mut locked_vec = keygen_phase_two_msg_vec_A.lock().await;
+                                    let keygen_phase_two_msg_vec = keygen_phase_two_msg_vec_clone.clone();
+                                    let mut locked_vec = keygen_phase_two_msg_vec.lock().await;
                                     locked_vec.push(msg);
                                     if locked_vec.len() == locked_proxy.threashold_param.share_counts as usize 
                                     {
@@ -235,31 +411,31 @@ pub async fn main () -> Result<(), anyhow::Error>
                                         }
                                     }
                                 }
-                                message::node::common_msg::KeyGenMsg::NodeToProxyKeyGenPhaseFiveP2PMsg(msg) => 
-                                {
-                                    info!("From id : {}, Role : {},  Get NodeToProxyKeyGenPhaseFiveP2PMsg",msg.sender,msg.role);
-                                    let mut locked_proxy = proxy.lock().await;
-                                    let keygen_five_vec = keygen_phase_five_msg_vec_clone.clone();
-                                    let mut locked_keygen_phase_msg_five_vec = keygen_five_vec.lock().await;
-                                    locked_keygen_phase_msg_five_vec.push(msg);
-                                    if locked_keygen_phase_msg_five_vec.len() == locked_proxy.threashold_param.share_counts as usize 
-                                    {
-                                        let keygen_phase_five_msg_str = keygen_to_gstbk(KeyGenMsg::ProxyToNodesKeyGenPhasefiveBroadcastMsg(locked_proxy.keygen_phase_five((*locked_keygen_phase_msg_five_vec).clone()).unwrap()));
-                                        let node_list = locked_proxy.node_info_vec.clone().unwrap(); 
-                                        match broadcast(keygen_phase_five_msg_str, node_list.clone()).await
-                                        {
-                                            Ok(_) => 
-                                            {
-                                                //println!("ProxyToNodesKeyGenPhasefiveBroadcastMsg have send");
-                                            }
-                                            Err(e) => 
-                                            {
-                                                error!("Error: {},ProxyToNodesKeyGenPhasefiveBroadcastMsg can not sent ",e);
-                                                return ;
-                                            }
-                                        };
-                                    }
-                                }
+                                // message::node::common_msg::KeyGenMsg::NodeToProxyKeyGenPhaseFiveP2PMsg(msg) => 
+                                // {
+                                //     info!("From id : {}, Role : {},  Get NodeToProxyKeyGenPhaseFiveP2PMsg",msg.sender,msg.role);
+                                //     let mut locked_proxy = proxy.lock().await;
+                                //     let keygen_five_vec = keygen_phase_five_msg_vec_clone.clone();
+                                //     let mut locked_keygen_phase_msg_five_vec = keygen_five_vec.lock().await;
+                                //     locked_keygen_phase_msg_five_vec.push(msg);
+                                //     if locked_keygen_phase_msg_five_vec.len() == locked_proxy.threashold_param.share_counts as usize 
+                                //     {
+                                //         let keygen_phase_five_msg_str = keygen_to_gstbk(KeyGenMsg::ProxyToNodesKeyGenPhasefiveBroadcastMsg(locked_proxy.keygen_phase_five((*locked_keygen_phase_msg_five_vec).clone()).unwrap()));
+                                //         let node_list = locked_proxy.node_info_vec.clone().unwrap(); 
+                                //         match broadcast(keygen_phase_five_msg_str, node_list.clone()).await
+                                //         {
+                                //             Ok(_) => 
+                                //             {
+                                //                 //println!("ProxyToNodesKeyGenPhasefiveBroadcastMsg have send");
+                                //             }
+                                //             Err(e) => 
+                                //             {
+                                //                 error!("Error: {},ProxyToNodesKeyGenPhasefiveBroadcastMsg can not sent ",e);
+                                //                 return ;
+                                //             }
+                                //         };
+                                //     }
+                                // }
                                 _ => 
                                 {
 
@@ -327,6 +503,7 @@ pub async fn main () -> Result<(), anyhow::Error>
                         //         }
                         //     }
                         // }
+                        _ => {}  
                     }
                 }
                 _ => 
@@ -357,4 +534,19 @@ fn test()
    };
 }
 
- 
+//test
+#[test]
+fn decrypt_test() 
+{
+   match decrypt() 
+   {
+    Ok(_) =>
+    {
+        info!("Ok");
+    }
+    Err(_) => 
+    {
+        error!("No");
+    }
+   };
+}

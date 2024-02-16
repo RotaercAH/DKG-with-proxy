@@ -5,6 +5,7 @@
 
 use crate::config::config::Config;
 use crate::proxy::Proxy;
+use curv::BigInt;
 use message::proxy::setup_msg::{NodeInfo, ProxySetupPhaseBroadcastMsg, ProxySetupPhaseFinishFlag};
 use message::node::setup_msg::{NodeToProxySetupPhaseP2PMsg, NodeSetupPhaseFinishFlag};
 use log::{info};
@@ -12,12 +13,17 @@ impl Proxy{
     /// 初始化自身基本信息
     pub fn init(gs_tbk_config:Config)->Self
     {
+        let mut delta = BigInt::from(1);
+        for i in 1..= gs_tbk_config.threshold_params.share_counts{
+            delta *= BigInt::from(i);
+        }
         Self
         {
             id:0,
             role:"Proxy".to_string(),
             address:gs_tbk_config.proxy_addr,
             threashold_param:gs_tbk_config.threshold_params,
+            delta:delta,
             gpk:None,
             node_info_vec:None,
             participants:None,
@@ -37,7 +43,6 @@ impl Proxy{
             {
                 id:i,
                 cl_pk:node_init_msg.cl_pk,
-                // pk_hex:node_init_msg.pk_hex,
                 address:node_init_msg.address,
                
             };

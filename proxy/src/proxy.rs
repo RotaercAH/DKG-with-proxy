@@ -1,3 +1,4 @@
+use curv::BigInt;
 use serde::{Deserialize, Serialize};
 
 use message::{params::ThreasholdParam, proxy::setup_msg::NodeInfo};
@@ -10,6 +11,7 @@ pub struct Proxy
     pub role:String,
     pub address: String, 
     pub threashold_param: ThreasholdParam,
+    pub delta: BigInt,
     pub gpk:Option<Gpk>,
     pub node_info_vec: Option<Vec<NodeInfo>>,
     pub participants: Option<Vec<u16>>

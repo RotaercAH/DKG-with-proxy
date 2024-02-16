@@ -75,6 +75,13 @@ pub fn keygen_to_gstbk(msg_keygen : message::proxy::common_msg::KeyGenMsg) -> St
     return msg_str;
 }
 
+///dec阶段序列化消息
+pub fn dec_to_gstbk(msg_dec : message::proxy::common_msg::DecMsg)->String
+{
+    let msg_str = serde_json::to_string(&message::common_msg::GSTBKMsg::GSTBKMsgP(message::proxy::common_msg::GSTBKMsg::DecMsg(msg_dec))).unwrap();
+    return msg_str;
+}
+
 /// 序列化key manage阶段的消息
 // pub fn key_manage_to_gstbk (msg_key_manage : gs_tbk_scheme::messages::proxy::common_msg::KeyManageMsg) -> String
 // {

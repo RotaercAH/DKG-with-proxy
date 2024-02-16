@@ -1,7 +1,7 @@
 #!/bin/bash
 
-t=4
-n=7
+t=2
+n=4
 
 current_path=$(pwd)
 
